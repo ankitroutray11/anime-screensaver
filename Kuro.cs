@@ -9,8 +9,13 @@ namespace KuroLauncher
         [STAThread]
         static void Main(string[] args)
         {
-            string appDir = @"C:\Users\ankit\.gemini\antigravity\scratch\anime-screensaver";
-            string pythonw = @"C:\Users\ankit\AppData\Local\Programs\Python\Python312\pythonw.exe";
+            string appDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string pythonw = Path.Combine(userProfile, @"AppData\Local\Programs\Python\Python312\pythonw.exe");
+            if (!File.Exists(pythonw))
+            {
+                pythonw = "pythonw";
+            }
             string launcherPy = Path.Combine(appDir, "launcher.py");
 
             ProcessStartInfo psi = new ProcessStartInfo();

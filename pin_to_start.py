@@ -3,7 +3,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-BASE_DIR = Path(r"C:\Users\ankit\.gemini\antigravity\scratch\anime-screensaver")
+BASE_DIR = Path(__file__).resolve().parent
 PROGRAMS_USER = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
 PROGRAMS_ALL = Path(r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs")
 DESKTOP_DIR = Path(os.environ["USERPROFILE"]) / "Desktop"
