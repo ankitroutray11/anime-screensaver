@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KuroAnime — Dark Anime Screensaver</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark mode-kenburns">
+  <!-- Visual Canvas for subtle ambient fireflies/particles -->
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Dual-layer background presentation for 0-flicker seamless crossfades -->
+  <div id="wallpaper-stage">
+    <div id="bg-layer-a" class="wallpaper-layer active">
+      <div class="wallpaper-backdrop"></div>
+      <div class="wallpaper-foreground"></div>
+    </div>
+    <div id="bg-layer-b" class="wallpaper-layer">
+      <div class="wallpaper-backdrop"></div>
+      <div class="wallpaper-foreground"></div>
+    </div>
+    <div class="vignette-overlay"></div>
+    <div class="hud-gradient-scrim"></div>
+    <div id="oled-darkening-overlay" class="oled-darkening-overlay"></div>
+  </div>
+
+  <!-- Loading & Status Indicator -->
+  <div id="buffer-indicator" class="buffer-indicator hidden" title="Buffering next high-res art...">
+    <div class="pulse-dot"></div>
+    <span>Streaming</span>
+  </div>
+
+  <!-- ==========================================================================
+       KURO AMBIENT HUD ARCHITECTURE (5 ANCHOR ZONES)
+       ========================================================================== -->
+
+  <!-- Top-Left Zone: Clock & Full Date -->
+  <aside id="hud-top-left" class="hud-zone hud-top-left hud-element">
+    <div class="glass-panel clock-panel">
+      <div class="time-row">
+        <span id="clock-hours-mins">00:00</span>
+        <span id="clock-seconds" class="clock-seconds">00</span>
+        <span id="clock-ampm">PM</span>
+      </div>
+      <div class="date-row">
+        <span id="clock-date-text">Sunday · November 22, 2026</span>
+      </div>
+      <div id="clock-second-tz-row" class="second-tz-row hidden">
+        <span class="tz-label" id="clock-second-tz-label">🇯🇵 Tokyo</span>
+        <span class="tz-time" id="clock-second-tz-time">00:00 JST</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top-Right Zone: Weather Widget, Display Mode Switcher & Quick Actions -->
+  <aside id="hud-top-right" class="hud-zone hud-top-right hud-element">
+    <!-- Weather Panel -->
+    <div class="glass-panel weather-panel" id="weather-section">
+      <span class="weather-icon" id="weather-icon">🌙</span>
+      <div class="weather-meta">
+        <div class="weather-temp-row">
+          <span class="weather-temp" id="weather-temp">--°C</span>
+          <span class="weather-desc" id="weather-desc">Clear Night</span>
+          <span class="weather-feels" id="weather-feels">Feels --°</span>
+        </div>
+        <div class="weather-sub-row">
+          <span class="weather-city" id="weather-city">Auto</span>
+          <span class="weather-detail-item dashboard-only" id="weather-humidity" title="Relative Humidity">💧 --%</span>
+          <span class="weather-detail-item dashboard-only" id="weather-wind" title="Wind Speed">💨 -- km/h</span>
+          <span class="weather-detail-item dashboard-only" id="weather-sun" title="Sunrise & Sunset">🌅 -- · 🌇 --</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mode Selector & Quick Action Bar -->
+    <div class="glass-panel actions-panel">
+      <div class="mode-switcher" id="mode-switcher" title="Switch Display Mode (Key: M)">
+        <button class="mode-pill active" data-mode="ambient" title="Ambient Mode (Key: M)">Ambient</button>
+        <button class="mode-pill" data-mode="cinematic" title="Cinematic Mode (Key: M)">Cinematic</button>
+        <button class="mode-pill" data-mode="dashboard" title="Dashboard Mode (Key: M)">Dashboard</button>
+      </div>
+      
+      <div class="quick-icons">
+        <button id="btn-soundscape-toggle" class="icon-btn" title="Toggle Ambient Soundscape (Key: A)">🔇</button>
+        <button id="btn-quick-info" class="icon-btn" title="Artwork Details & Intelligence (Key: I)">ℹ️</button>
+        <button id="btn-history-open" class="icon-btn" title="Wallpaper History Explorer (Key: Y)">📜</button>
+        <button id="btn-library-open" class="icon-btn" title="Personal Wallpaper Library & Collections (Key: B)">📁</button>
+        <button id="btn-toggle-particles" class="icon-btn" title="Toggle Ambient Particles (Key: C)">✨</button>
+        <button id="btn-toggle-diagnostics" class="icon-btn" title="Performance Diagnostics & Adaptive Rendering (Key: D)">⚡</button>
+        <button id="btn-toggle-hud" class="icon-btn" title="Toggle HUD Overlays (Key: H)">👁️</button>
+        <button id="btn-settings-open" class="icon-btn" title="Screensaver Preferences (Key: S)">⚙️</button>
+        <button id="btn-fullscreen" class="icon-btn" title="Fullscreen (Key: F)">⛶</button>
+        <button id="btn-exit-screensaver" class="icon-btn exit-btn" title="Exit Screensaver Cleanly (Ctrl+Q)">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom-Left Zone: Artwork & Franchise Metadata -->
+  <aside id="hud-bottom-left" class="hud-zone hud-bottom-left hud-element">
+    <div class="glass-panel meta-panel" id="meta-panel">
+      <div class="meta-title-group">
+        <span class="meta-franchise" id="tag-mood">Popular Anime</span>
+        <span class="meta-character" id="tag-character"></span>
+      </div>
+
+      <div class="meta-badges">
+        <span class="tag-badge badge-quality" id="tag-quality" title="Technical Quality & Popularity Score">★ 85</span>
+        <span class="tag-badge badge-res" id="tag-res">3840 × 2160</span>
+        <span class="tag-badge badge-purity">✨ Unrepeatable</span>
+        <span class="tag-badge badge-palette dashboard-only" id="tag-palette">Dynamic Tint</span>
+        <span id="meta-offline-badge" class="tag-badge badge-offline hidden">⚡ Offline Mode</span>
+      </div>
+
+      <!-- Quick Franchise Switcher Bar (Visible in Ambient/Dashboard) -->
+      <div class="franchise-quick-scroll" id="quick-moods">
+        <button class="mood-btn active" data-anime="all">🔥 All</button>
+        <button class="mood-btn" data-anime="jujutsu-kaisen">Jujutsu Kaisen</button>
+        <button class="mood-btn" data-anime="demon-slayer">Demon Slayer</button>
+        <button class="mood-btn" data-anime="attack-on-titan">Attack on Titan</button>
+        <button class="mood-btn" data-anime="solo-leveling">Solo Leveling</button>
+        <button class="mood-btn" data-anime="chainsaw-man">Chainsaw Man</button>
+        <button class="mood-btn" data-anime="one-piece">One Piece</button>
+        <button class="mood-btn" data-anime="bleach">Bleach</button>
+        <button class="mood-btn" data-anime="frieren">Frieren</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom-Center Zone: Slideshow Progress -->
+  <aside id="hud-bottom-center" class="hud-zone hud-bottom-center hud-element">
+    <div class="glass-panel progress-panel" id="progress-panel" title="Time until next artwork">
+      <div class="progress-track">
+        <div id="slide-progress" class="slide-progress-bar"></div>
+      </div>
+      <div class="progress-meta dashboard-only">
+        <span id="progress-timer-text">00:00</span>
+        <span id="network-pill" class="network-pill hidden">⚡ OFFLINE MODE</span>
+        <span id="stats-badge" class="stream-badge">LIVE · #1</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom-Right Zone: Playback Controls & Dashboard Stats -->
+  <aside id="hud-bottom-right" class="hud-zone hud-bottom-right hud-element">
+    <!-- Dashboard Extended Stats (Visible only in Dashboard Mode) -->
+    <div class="glass-panel dashboard-stats-panel dashboard-only" id="dashboard-stats-card">
+      <div class="dash-stat">
+        <span class="dash-stat-label">Art Seen</span>
+        <span class="dash-stat-val" id="dash-stat-seen">0</span>
+      </div>
+      <div class="dash-stat">
+        <span class="dash-stat-label">Favorites</span>
+        <span class="dash-stat-val" id="dash-stat-favs">0</span>
+      </div>
+      <div class="dash-stat">
+        <span class="dash-stat-label">Ratio</span>
+        <span class="dash-stat-val" id="dash-stat-ratio">16:9</span>
+      </div>
+    </div>
+
+    <!-- Playback Controls -->
+    <div class="glass-panel controls-panel" id="controls-panel">
+      <button id="btn-prev" class="control-btn" title="Previous Artwork (Key: ←)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button id="btn-play-pause" class="control-btn primary" title="Pause / Resume (Key: Space)">
+        <svg id="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        <svg id="icon-play" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button id="btn-next" class="control-btn" title="Next Artwork (Key: →)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <button id="btn-info" class="control-btn" title="Artwork Details & Intelligence (Key: I)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      </button>
+      <button id="btn-composition-toggle" class="control-btn" title="Focal Point & Composition Framing (Key: O)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+      </button>
+      <button id="btn-favorite" class="control-btn" title="Save to Favorites (Key: L)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button id="btn-blacklist-current" class="control-btn" title="Permanently Blacklist Artwork (Key: X)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </button>
+      <a id="btn-download" class="control-btn icon-link" title="Open / Download Full Resolution" target="_blank" rel="noopener noreferrer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Collection Exhaustion Overlay -->
+  <div id="exhaustion-overlay" class="modal-backdrop hidden">
+    <div class="modal-card exhaustion-card">
+      <div class="exhaustion-icon">🏁</div>
+      <h3 id="exhaustion-title">Collection Exhausted</h3>
+      <p id="exhaustion-msg">Every wallpaper in this collection has been displayed. No wallpapers are ever repeated.</p>
+      <div class="exhaustion-actions">
+        <button id="btn-exhaustion-switch" class="small-btn">Switch to All Franchises</button>
+        <button id="btn-exhaustion-settings" class="secondary-btn">Open Settings</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- Advanced Anime Ambient Control Center Modal Dialog -->
+  <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Anime Ambient Control Center">
+    <div class="modal-card control-center-card">
+      <!-- Control Center Header -->
+      <div class="control-center-header">
+        <div class="header-branding">
+          <div class="header-icon-badge">🎛️</div>
+          <div>
+            <h3 class="control-center-title">ANIME AMBIENT // CONTROL CENTER</h3>
+            <span class="control-center-subtitle">System Preferences, Visuals, Display &amp; Performance Calibration</span>
+          </div>
+        </div>
+
+        <!-- Searchable Settings Input -->
+        <div class="control-center-search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="settings-search-input" placeholder="Search settings (interval, theme, cache, oled, 4k)..." autocomplete="off" />
+          <button id="btn-settings-search-clear" class="search-clear-btn hidden" title="Clear search">✕</button>
+        </div>
+
+        <div class="header-actions">
+          <button id="btn-settings-close" class="modal-close-btn" title="Close Preferences (Esc or S)">✕</button>
+        </div>
+      </div>
+
+      <!-- Control Center Body: Sidebar Nav + Content -->
+      <div class="control-center-body">
+        <!-- Sidebar Navigation -->
+        <nav class="control-center-nav" role="tablist">
+          <button class="nav-tab active" data-tab="general" role="tab" aria-selected="true">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">General</span>
+            <span class="nav-badge" data-section-badge="general"></span>
+          </button>
+          <button class="nav-tab" data-tab="wallpaper" role="tab" aria-selected="false">
+            <span class="nav-icon">🖼️</span>
+            <span class="nav-label">Wallpaper</span>
+            <span class="nav-badge" data-section-badge="wallpaper"></span>
+          </button>
+          <button class="nav-tab" data-tab="visual" role="tab" aria-selected="false">
+            <span class="nav-icon">🎨</span>
+            <span class="nav-label">Visual</span>
+            <span class="nav-badge" data-section-badge="visual"></span>
+          </button>
+          <button class="nav-tab" data-tab="display" role="tab" aria-selected="false">
+            <span class="nav-icon">🖥️</span>
+            <span class="nav-label">Display</span>
+            <span class="nav-badge" data-section-badge="display"></span>
+          </button>
+          <button class="nav-tab" data-tab="performance" role="tab" aria-selected="false">
+            <span class="nav-icon">⚡</span>
+            <span class="nav-label">Performance</span>
+            <span class="nav-badge" data-section-badge="performance"></span>
+          </button>
+          <button class="nav-tab" data-tab="privacy" role="tab" aria-selected="false">
+            <span class="nav-icon">🔒</span>
+            <span class="nav-label">Privacy</span>
+            <span class="nav-badge" data-section-badge="privacy"></span>
+          </button>
+          <button class="nav-tab" data-tab="moderation" role="tab" aria-selected="false">
+            <span class="nav-icon">🛡️</span>
+            <span class="nav-label">Safety &amp; Moderation</span>
+            <span class="nav-badge" data-section-badge="moderation"></span>
+          </button>
+        </nav>
+
+        <!-- Content Area -->
+        <div class="control-center-content">
+          <!-- Active Section Title Bar -->
+          <div class="section-title-bar">
+            <div>
+              <h4 id="active-section-title">⚙️ General Preferences</h4>
+              <p id="active-section-desc">Default display modes, slideshow timing strategies, clock and weather.</p>
+            </div>
+            <button id="btn-reset-section" class="secondary-btn btn-sm" title="Reset this section to default values">↺ Reset Section</button>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- 1. GENERAL SECTION -->
+          <!-- ========================================================= -->
+          <div id="section-general" class="control-center-section" data-section="general">
+            <!-- Default Display Mode -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Default Display Mode</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Controls primary ambient presentation style: Ambient (minimal widgets), Cinematic (borderless art), or Dashboard (expanded stats).</span>
+                </span>
+              </div>
+              <select id="setting-display-mode">
+                <option value="ambient" selected>Ambient Mode (Small clock, weather, auto-dim HUD)</option>
+                <option value="cinematic">Cinematic Mode (Full-screen artwork, zero clutter)</option>
+                <option value="dashboard">Dashboard Mode (Expanded clock, stats, metadata)</option>
+              </select>
+            </div>
+
+            <!-- Intelligent Slideshow Scheduling -->
+            <div class="scheduler-box setting-card">
+              <div class="scheduler-header">
+                <span class="scheduler-icon">⏱️</span>
+                <div>
+                  <label style="color: #60A5FA; font-weight: 700; font-size: 0.92rem;">Intelligent Slideshow Scheduling</label>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);">Configurable pacing strategies, time slots, and smart viewing duration.</div>
+                </div>
+              </div>
+
+              <div class="setting-group" style="margin-top: 0.8rem;">
+                <label for="setting-schedule-strategy">
+                  <span>Scheduling Strategy</span>
+                  <span class="tooltip-wrap">
+                    <span class="tooltip-icon">ℹ️</span>
+                    <span class="tooltip-box">Select how transition pacing is determined: Fixed constant, Random jitter within range, Quality-weighted dwell, Diurnal day/night slots, Franchise rotation, or Manual only.</span>
+                  </span>
+                </label>
+                <select id="setting-schedule-strategy">
+                  <option value="fixed" selected>Fixed Interval (Standard constant duration)</option>
+                  <option value="random">Random Interval (Dynamic jitter within range)</option>
+                  <option value="quality_weighted">Quality &amp; Rating Weighted (Longer dwell for masterpieces)</option>
+                  <option value="time_of_day">Time-Based Scheduling (Day / Evening / Night pacing)</option>
+                  <option value="franchise_rotation">Franchise Rotation (Auto-cycle series every N slides)</option>
+                  <option value="manual">Manual Only (Timer disabled, advance with keys/clicks)</option>
+                </select>
+              </div>
+
+              <!-- Strategy: Fixed Interval Slider -->
+              <div class="setting-group schedule-subpanel" id="panel-fixed-interval">
+                <label>Base Slide Duration</label>
+                <div class="range-row">
+                  <input type="range" id="setting-interval" min="5" max="300" step="5" value="30">
+                  <span id="setting-interval-label">30s</span>
+                </div>
+              </div>
+
+              <!-- Strategy: Random Interval Range -->
+              <div class="setting-group schedule-subpanel hidden" id="panel-random-interval">
+                <label>Random Duration Range</label>
+                <div class="range-dual-row" style="display: flex; gap: 0.8rem; align-items: center;">
+                  <div style="flex: 1;">
+                    <span style="font-size: 0.75rem; color: var(--text-dim);">Min: <b id="setting-random-min-label">15s</b></span>
+                    <input type="range" id="setting-random-min" min="5" max="120" step="5" value="15">
+                  </div>
+                  <div style="flex: 1;">
+                    <span style="font-size: 0.75rem; color: var(--text-dim);">Max: <b id="setting-random-max-label">60s</b></span>
+                    <input type="range" id="setting-random-max" min="15" max="300" step="5" value="60">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Strategy: Time-Based Scheduling Slots -->
+              <div class="schedule-subpanel hidden" id="panel-time-slots" style="background: rgba(255,255,255,0.02); padding: 0.6rem; border-radius: 8px; margin-bottom: 0.8rem;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: #93C5FD; margin-bottom: 0.4rem;">Time-of-Day Pacing Slots</div>
+                <div style="display: flex; gap: 0.5rem; justify-content: space-between;">
+                  <div style="flex: 1;">
+                    <span style="font-size: 0.7rem; color: var(--text-dim);">☀️ Day (08-17)</span>
+                    <input type="number" id="setting-day-sec" min="5" max="300" value="25" class="compact-input">
+                  </div>
+                  <div style="flex: 1;">
+                    <span style="font-size: 0.7rem; color: var(--text-dim);">🌆 Eve (17-22)</span>
+                    <input type="number" id="setting-eve-sec" min="5" max="300" value="35" class="compact-input">
+                  </div>
+                  <div style="flex: 1;">
+                    <span style="font-size: 0.7rem; color: var(--text-dim);">🌙 Night (22-08)</span>
+                    <input type="number" id="setting-night-sec" min="5" max="300" value="60" class="compact-input">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Strategy: Franchise Rotation Slider -->
+              <div class="setting-group schedule-subpanel hidden" id="panel-franchise-rotation">
+                <label>Slides per Franchise before Rotating</label>
+                <div class="range-row">
+                  <input type="range" id="setting-franchise-rot-interval" min="1" max="20" step="1" value="5">
+                  <span id="setting-franchise-rot-label">5 slides</span>
+                </div>
+              </div>
+
+              <!-- Mode-Specific Intervals (Cinematic & Dashboard) -->
+              <div style="display: flex; gap: 0.8rem; margin-top: 0.6rem;">
+                <div style="flex: 1;">
+                  <label style="font-size: 0.75rem; color: var(--text-dim);">🎬 Cinematic Duration</label>
+                  <div class="range-row">
+                    <input type="range" id="setting-cinematic-sec" min="10" max="300" step="5" value="45">
+                    <span id="setting-cinematic-sec-label">45s</span>
+                  </div>
+                </div>
+                <div style="flex: 1;">
+                  <label style="font-size: 0.75rem; color: var(--text-dim);">📊 Dashboard Duration</label>
+                  <div class="range-row">
+                    <input type="range" id="setting-dashboard-sec" min="5" max="120" step="5" value="20">
+                    <span id="setting-dashboard-sec-label">20s</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Toggles: Quality Bonus & Pause on Tab Inactivity -->
+              <div style="margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <label class="checkbox-label" style="font-size: 0.8rem;">
+                  <input type="checkbox" id="setting-schedule-quality-bonus" checked>
+                  <span>Quality bonus: Extend viewing time for high-quality &amp; favorited artwork</span>
+                </label>
+                <label class="checkbox-label" style="font-size: 0.8rem;">
+                  <input type="checkbox" id="setting-schedule-pause-hidden" checked>
+                  <span>Pause slideshow timer when window is minimized or hidden</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Startup Behavior -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>🪟 Windows Startup &amp; Launch Behavior</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Configures automatic Windows startup shortcut and default browser window presentation (Kiosk vs Windowed).</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                  <label style="font-size: 0.8rem; color: var(--text-muted);">Launch on Windows Startup</label>
+                  <div class="toggle-row" style="margin-top: 0.35rem;">
+                    <input type="checkbox" id="setting-win-startup" style="accent-color: #6EE7B7; width: 16px; height: 16px; cursor: pointer;" />
+                    <span style="font-size: 0.8rem;">Auto-launch on system boot</span>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                  <label style="font-size: 0.8rem; color: var(--text-muted);">Default Launch Mode</label>
+                  <select id="setting-launch-mode" class="lib-select" style="padding: 0.45rem 0.6rem; font-size: 0.8rem;">
+                    <option value="kiosk">Kiosk (Borderless Fullscreen)</option>
+                    <option value="windowed">Windowed (1280×720)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Clock Preferences -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Clock &amp; Date Preferences</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Customizes digital clock time notation, seconds display, date format styling, and optional secondary time zone.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Time Notation</label>
+                  <div class="radio-row">
+                    <label><input type="radio" name="timeFormat" value="12" checked> 12-Hour (AM/PM)</label>
+                    <label><input type="radio" name="timeFormat" value="24"> 24-Hour</label>
+                  </div>
+                  <div class="toggle-row" style="margin-top: 0.4rem;">
+                    <input type="checkbox" id="setting-show-seconds" checked>
+                    <span>Display Seconds</span>
+                  </div>
+                </div>
+                <div class="setting-group">
+                  <label>Calendar Date Format</label>
+                  <select id="setting-date-format">
+                    <option value="full">Full (Sunday · November 22, 2026)</option>
+                    <option value="standard">Standard (Sun · Nov 22, 2026)</option>
+                    <option value="iso">ISO 8601 (2026-11-22 · Sunday)</option>
+                    <option value="anime_jp">Japanese Anime Style (2026年11月22日 日曜日)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="setting-group" style="margin-top: 0.4rem;">
+                <label>Dual Time Zone (Secondary Clock)</label>
+                <select id="setting-second-tz">
+                  <option value="none">Disabled (Local Clock Only)</option>
+                  <option value="Asia/Tokyo">🇯🇵 Tokyo, Japan (JST / UTC+9) — Anime Capital</option>
+                  <option value="America/New_York">🇺🇸 New York (EST / EDT)</option>
+                  <option value="America/Los_Angeles">🇺🇸 Los Angeles (PST / PDT)</option>
+                  <option value="Europe/London">🇬🇧 London (GMT / BST)</option>
+                  <option value="Europe/Paris">🇫🇷 Paris / Berlin (CET / CEST)</option>
+                  <option value="Asia/Seoul">🇰🇷 Seoul (KST / UTC+9)</option>
+                  <option value="UTC">🌐 UTC (Coordinated Universal Time)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Weather Preferences -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Weather Preferences (Open-Meteo Live)</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Live real-time weather and temperature updates fetched securely via Open-Meteo with zero API key required.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Units</label>
+                  <div class="radio-row">
+                    <label><input type="radio" name="tempUnit" value="C" checked> Celsius (°C, km/h)</label>
+                    <label><input type="radio" name="tempUnit" value="F"> Fahrenheit (°F, mph)</label>
+                  </div>
+                </div>
+                <div class="setting-group">
+                  <label>Location Override</label>
+                  <div class="input-row">
+                    <input type="text" id="setting-city" placeholder="Auto IP (or enter e.g. Tokyo, Kyoto, London)">
+                    <button id="btn-save-city" class="small-btn">Save</button>
+                    <button id="btn-auto-city" class="secondary-btn" title="Reset to Automatic IP Detection">Auto</button>
+                  </div>
+                </div>
+              </div>
+              <div class="stat-line" style="margin-top: 0.2rem;">
+                <span style="font-size: 0.75rem; color: var(--text-dim);">Detected Location:</span>
+                <strong id="stat-weather-location" style="font-size: 0.78rem;">Auto (Detecting...)</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- 2. WALLPAPER SECTION -->
+          <!-- ========================================================= -->
+          <div id="section-wallpaper" class="control-center-section hidden" data-section="wallpaper">
+            <!-- Franchise Selection -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Anime Franchise Selection</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Filter wallpaper discovery to a specific anime series, or choose Random Anime to cycle through all 18 verified franchises.</span>
+                </span>
+              </div>
+              <select id="setting-anime">
+                <option value="all">🔥 Random Anime (Cycles through all 18 franchises)</option>
+                <option value="jujutsu-kaisen">Jujutsu Kaisen</option>
+                <option value="demon-slayer">Demon Slayer</option>
+                <option value="attack-on-titan">Attack on Titan</option>
+                <option value="solo-leveling">Solo Leveling</option>
+                <option value="chainsaw-man">Chainsaw Man</option>
+                <option value="one-piece">One Piece</option>
+                <option value="bleach">Bleach</option>
+                <option value="cyberpunk-edgerunners">Cyberpunk: Edgerunners</option>
+                <option value="neon-genesis-evangelion">Neon Genesis Evangelion</option>
+                <option value="naruto">Naruto</option>
+                <option value="dragon-ball">Dragon Ball</option>
+                <option value="death-note">Death Note</option>
+                <option value="hunter-x-hunter">Hunter x Hunter</option>
+                <option value="frieren">Frieren: Beyond Journey's End</option>
+                <option value="my-hero-academia">My Hero Academia</option>
+                <option value="vinland-saga">Vinland Saga</option>
+                <option value="black-clover">Black Clover</option>
+                <option value="fate-series">Fate Series</option>
+              </select>
+
+              <div class="setting-group" id="group-character" style="margin-top: 0.5rem;">
+                <label>Character Filter (Optional)</label>
+                <select id="setting-character">
+                  <option value="all">✨ All Characters in Franchise</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Franchise Weights & Taste Engine -->
+            <div class="personalization-box setting-card">
+              <div class="oled-header-row">
+                <div>
+                  <label style="color: #A78BFA; font-weight: 700; font-size: 0.92rem;">🧠 Franchise Weights &amp; Recommendation Bias</label>
+                  <p class="oled-subtext">Adjust explicit franchise weights or let the local taste engine learn from favorites &amp; dwell time</p>
+                </div>
+                <input type="checkbox" id="setting-rec-enabled" checked title="Master Personalization Toggle">
+              </div>
+
+              <div id="rec-subcontrols" class="oled-subcontrols" style="margin-top: 0.75rem;">
+                <!-- Manual Preference Bias Slider / Adjustment -->
+                <div class="setting-subgroup">
+                  <span class="range-title" style="font-weight: 600; color: #E2E8F0; margin-bottom: 0.35rem; display: block;">
+                    <span>Manual Franchise Bias Weight</span>
+                    <span class="tooltip-wrap">
+                      <span class="tooltip-icon">ℹ️</span>
+                      <span class="tooltip-box">Positive scores (+5 to +50) boost discovery frequency. Negative scores (-5 to -50) deprioritize a series without completely blacklisting it.</span>
+                    </span>
+                  </span>
+                  <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    <select id="rec-manual-franchise-select" class="lib-select" style="flex: 2; padding: 0.35rem 0.5rem; font-size: 0.75rem;">
+                      <option value="">Select franchise to adjust weight...</option>
+                    </select>
+                    <input type="number" id="rec-manual-score-input" min="-50" max="50" step="5" value="10" style="width: 60px; padding: 0.35rem; font-size: 0.75rem; background: #0A0F18; border: 1px solid rgba(255,255,255,0.15); color: #FFF; border-radius: 4px;" title="Bias score (-50 to +50)">
+                    <button id="btn-rec-apply-bias" class="secondary-btn" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">Apply Weight</button>
+                  </div>
+                </div>
+
+                <!-- Learned Preferences Overview -->
+                <div class="setting-subgroup" style="margin-top: 0.6rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <span class="range-title" style="font-weight: 600; color: #E2E8F0;">Active Learned Franchise Weights</span>
+                    <span id="rec-events-badge" class="badge" style="font-size: 0.7rem; background: rgba(167, 139, 250, 0.2); color: #C4B5FD; padding: 2px 6px; border-radius: 4px;">0 Interactions</span>
+                  </div>
+                  <div id="rec-franchise-chips" class="rec-chips-container">
+                    <span style="font-size: 0.75rem; color: #94A3B8;">No interaction history yet. Browse or favorite art to train!</span>
+                  </div>
+                </div>
+
+                <!-- Top Characters -->
+                <div class="setting-subgroup" style="margin-top: 0.5rem;">
+                  <span class="range-title" style="font-weight: 600; color: #E2E8F0; margin-bottom: 0.35rem; display: block;">Top Weighted Characters</span>
+                  <div id="rec-character-chips" class="rec-chips-container">
+                    <span style="font-size: 0.75rem; color: #94A3B8;">No character preferences recorded yet.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Minimum Popularity & Quality Scoring -->
+            <div class="quality-box setting-card">
+              <div class="oled-header-row">
+                <div>
+                  <label style="color: #FBBF24; font-weight: 700; font-size: 0.92rem;">✨ Artwork Quality &amp; Popularity Criteria</label>
+                  <p class="oled-subtext">Technical image fidelity, resolution thresholds, and community popularity influence</p>
+                </div>
+                <span id="quality-avg-badge" class="badge" style="font-size: 0.7rem; background: rgba(251, 191, 36, 0.2); color: #FCD34D; padding: 2px 6px; border-radius: 4px;">Avg: --/100</span>
+              </div>
+
+              <div id="quality-subcontrols" class="oled-subcontrols" style="margin-top: 0.75rem;">
+                <div class="setting-row-split">
+                  <div class="setting-group">
+                    <label>
+                      <span>Minimum Resolution</span>
+                      <span class="tooltip-wrap">
+                        <span class="tooltip-icon">ℹ️</span>
+                        <span class="tooltip-box">Excludes images below the selected resolution standard to ensure high definition rendering on modern displays.</span>
+                      </span>
+                    </label>
+                    <select id="setting-min-resolution" class="lib-select">
+                      <option value="any" selected>Any Resolution (Adaptive)</option>
+                      <option value="1080p">1080p+ Full HD (≥ 1920×1080)</option>
+                      <option value="1440p">1440p+ 2K QHD (≥ 2560×1440)</option>
+                      <option value="4k">4K UHD (≥ 3840×2160)</option>
+                      <option value="8k">8K Ultra UHD (≥ 7680×4320)</option>
+                    </select>
+                  </div>
+                  <div class="setting-group">
+                    <label>
+                      <span>Minimum Quality Score</span>
+                      <span class="tooltip-wrap">
+                        <span class="tooltip-icon">ℹ️</span>
+                        <span class="tooltip-box">Filters out artwork scoring below this combined score (0–100) based on resolution, sharpness, and dynamic range.</span>
+                      </span>
+                    </label>
+                    <div class="range-row">
+                      <input type="range" id="setting-quality-threshold" min="0" max="90" step="5" value="50">
+                      <span class="range-value" id="setting-quality-threshold-label">50 / 100</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-row-split" style="margin-top: 0.5rem;">
+                  <div class="setting-group">
+                    <label>Community Popularity Weight</label>
+                    <select id="setting-quality-pop-weight" class="lib-select">
+                      <option value="0.15">Low (15% Popularity, 85% Technical)</option>
+                      <option value="0.35" selected>Balanced (35% Popularity, 65% Technical)</option>
+                      <option value="0.50">High (50% Popularity, 50% Technical)</option>
+                    </select>
+                  </div>
+                  <div class="setting-group">
+                    <label>Target Aspect Ratio Fit</label>
+                    <select id="setting-ratio">
+                      <option value="auto" selected>Auto Detect (Match Viewport / Physical Ratio)</option>
+                      <option value="landscape">Landscape (16:9 / 16:10)</option>
+                      <option value="ultrawide">Ultrawide (21:9 / 32:9)</option>
+                      <option value="portrait">Portrait (9:16 Pivot)</option>
+                      <option value="any">Any Aspect Ratio</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Toggles -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.6rem;">
+                  <label class="checkbox-label" style="font-size: 0.78rem;">
+                    <input type="checkbox" id="setting-quality-native-res" checked>
+                    <span>Prefer Native Screen Resolution</span>
+                  </label>
+                  <label class="checkbox-label" style="font-size: 0.78rem;">
+                    <input type="checkbox" id="setting-quality-aspect-ratio" checked>
+                    <span>Strict Aspect Fit (Avoid Bars)</span>
+                  </label>
+                  <label class="checkbox-label" style="font-size: 0.78rem;">
+                    <input type="checkbox" id="setting-quality-avoid-bright" checked>
+                    <span>Filter Blindingly Bright Art</span>
+                  </label>
+                  <label class="checkbox-label" style="font-size: 0.78rem;">
+                    <input type="checkbox" id="setting-quality-avoid-dark">
+                    <span>Filter Pitch-Dark Art</span>
+                  </label>
+                </div>
+
+                <div style="margin-top: 0.6rem; display: flex; justify-content: flex-end;">
+                  <button id="btn-quality-rescore" class="secondary-btn btn-sm">↺ Re-evaluate Catalog Scores</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Duplicate Sensitivity & Diversity Guard -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Duplicate Sensitivity &amp; Diversity Guard</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Strict zero-repetition guarantees that no artwork repeats until every candidate in the library has been displayed. Diversity guard avoids consecutive repeats of the same series.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Duplicate Handling Policy</label>
+                  <select id="setting-duplicate-sensitivity" class="lib-select">
+                    <option value="strict" selected>Strict Zero-Repeat Guarantee (UNSEEN ➔ RESERVED ➔ DISPLAYED)</option>
+                    <option value="balanced">Balanced Cycle (Reset after full cycle)</option>
+                    <option value="relaxed">Relaxed Rotation (Dynamic weighted sampling)</option>
+                  </select>
+                </div>
+                <div class="setting-group" style="display: flex; flex-direction: column; justify-content: center;">
+                  <div class="toggle-row" style="margin-top: 0.75rem;">
+                    <input type="checkbox" id="setting-rec-diversity" checked>
+                    <span style="font-size: 0.82rem;">Diversity Guard (Prevents repeating same franchise consecutively)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Artwork Providers & Failover Resilience -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Multi-Provider Anime Artwork Failover</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Resilient multi-provider engine. Automatically fails over from Primary (Wallhaven) to Secondary providers (Safebooru, Konachan) when unavailable, rate-limited (HTTP 429), or exhausted, maintaining strict SFW filtering and global deduplication.</span>
+                </span>
+              </div>
+              <div class="provider-settings-container">
+                <div class="provider-row" data-provider="wallhaven">
+                  <div class="provider-info">
+                    <span class="provider-name">Wallhaven API <span class="provider-tier-badge primary">Primary</span></span>
+                    <span class="provider-desc">Native high-res artwork search · SFW purity=100</span>
+                  </div>
+                  <div class="provider-status-group">
+                    <span id="provider-badge-wallhaven" class="provider-status-badge healthy">Healthy</span>
+                    <label class="switch-toggle" title="Toggle Wallhaven">
+                      <input type="checkbox" id="provider-toggle-wallhaven" checked>
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="provider-row" data-provider="safebooru">
+                  <div class="provider-info">
+                    <span class="provider-name">Safebooru <span class="provider-tier-badge secondary">Secondary Booru</span></span>
+                    <span class="provider-desc">Strict SFW anime community booru · Rating general</span>
+                  </div>
+                  <div class="provider-status-group">
+                    <span id="provider-badge-safebooru" class="provider-status-badge healthy">Standby</span>
+                    <label class="switch-toggle" title="Toggle Safebooru">
+                      <input type="checkbox" id="provider-toggle-safebooru" checked>
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="provider-row" data-provider="konachan">
+                  <div class="provider-info">
+                    <span class="provider-name">Konachan.net <span class="provider-tier-badge secondary">Secondary Hi-Res</span></span>
+                    <span class="provider-desc">High-resolution desktop wallpapers · Rating:s enforced</span>
+                  </div>
+                  <div class="provider-status-group">
+                    <span id="provider-badge-konachan" class="provider-status-badge healthy">Standby</span>
+                    <label class="switch-toggle" title="Toggle Konachan">
+                      <input type="checkbox" id="provider-toggle-konachan" checked>
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="provider-footer-row">
+                  <div class="provider-diag-summary">
+                    <span>Active: <strong id="provider-diag-active" style="color: var(--dynamic-accent);">Wallhaven</strong></span>
+                    <span>Failovers: <strong id="provider-diag-failovers">0</strong></span>
+                  </div>
+                  <button id="btn-provider-reset-circuits" class="secondary-btn btn-sm" title="Reset all tripped circuit breakers back to CLOSED">⚡ Reset Circuit Breakers</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Verified Franchise Tag Intelligence Administration -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>🏷️ Verified Franchise Tag Intelligence</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Administrative catalog of verified numeric Wallhaven tag IDs, Japanese/English aliases, character tag bindings, and ambiguity guard exclusions. Inspect or update entries dynamically without code changes.</span>
+                </span>
+              </div>
+              <div class="tag-intelligence-container">
+                <!-- Tag Verification Tester -->
+                <div class="tag-verify-tool">
+                  <span style="font-size: 0.8rem; font-weight: 600; color: #94A3B8;">Live Wallhaven Tag Verification Tool:</span>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.35rem;">
+                    <input type="number" id="input-verify-tag-id" placeholder="Enter numeric tag ID (e.g. 1405)" class="lib-input" style="flex: 1; padding: 0.38rem 0.6rem; font-size: 0.8rem; background: #0A0F18; border: 1px solid rgba(255,255,255,0.15); color: #FFF; border-radius: 4px;">
+                    <button id="btn-verify-tag-id" class="primary-btn btn-sm">🔍 Verify Tag Online</button>
+                  </div>
+                  <div id="tag-verify-result" class="tag-verify-result hidden" style="margin-top: 0.4rem; font-size: 0.78rem;"></div>
+                </div>
+
+                <!-- Franchise Catalog Table & Actions -->
+                <div class="tag-catalog-section" style="margin-top: 0.85rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem;">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: #E2E8F0;">Configured Franchises (<span id="tag-catalog-count">18</span>)</span>
+                    <div style="display: flex; gap: 0.4rem;">
+                      <button id="btn-tag-catalog-refresh" class="secondary-btn btn-sm" title="Reload catalog from disk/API">↻ Refresh</button>
+                      <button id="btn-tag-catalog-reset" class="secondary-btn btn-sm" style="color: #F87171;" title="Reset catalog to verified defaults">↺ Reset Defaults</button>
+                    </div>
+                  </div>
+                  <div class="tag-catalog-table-wrap" style="max-height: 240px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">
+                    <table class="tag-catalog-table" style="width: 100%; border-collapse: collapse; font-size: 0.76rem;">
+                      <thead>
+                        <tr style="background: rgba(255,255,255,0.05); text-align: left; color: #94A3B8; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                          <th style="padding: 6px 8px;">Franchise</th>
+                          <th style="padding: 6px 8px;">Verified Tag IDs</th>
+                          <th style="padding: 6px 8px;">Character Tags</th>
+                          <th style="padding: 6px 8px;">Ambiguity Exclusions</th>
+                          <th style="padding: 6px 8px; text-align: right;">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tag-catalog-tbody">
+                        <!-- Populated dynamically by app.js -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- 3. VISUAL SECTION -->
+          <!-- ========================================================= -->
+          <div id="section-visual" class="control-center-section hidden" data-section="visual">
+            <!-- Theme & Dynamic Accent -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Color Theme &amp; Palette Accents</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Preview changes immediately. Choose a curated aesthetic dark anime theme and configure dynamic artwork color extraction.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Aesthetic Preset Theme</label>
+                  <select id="setting-visual-theme" class="lib-select">
+                    <option value="kuro-dark" selected>🌌 Kuro Dark Anime (Deep Black &amp; Cyan)</option>
+                    <option value="cyberpunk-neon">⚡ Cyberpunk Neon (Violet &amp; Electric Cyan)</option>
+                    <option value="sakura-blossom">🌸 Sakura Blossom (Plum &amp; Rose Gold)</option>
+                    <option value="midnight-minimal">🌑 Midnight Minimal (Slate &amp; Monochrome)</option>
+                    <option value="tokyo-noir">🖤 Tokyo Noir (Pure OLED Midnight)</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label>Accent Color Control</label>
+                  <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <label class="checkbox-label" style="font-size: 0.8rem;">
+                      <input type="checkbox" id="setting-visual-dynamic-accent" checked>
+                      <span>Dynamic Artwork Extraction</span>
+                    </label>
+                    <input type="color" id="setting-visual-accent-color" value="#38bdf8" style="width: 36px; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: transparent;" title="Custom Fixed Accent Color">
+                  </div>
+                  <div class="color-swatches" id="swatches-container">
+                    <span style="font-size: 0.7rem; color: var(--text-dim);">Swatches:</span>
+                    <div class="color-swatch active" style="background: #38bdf8;" data-color="#38bdf8" title="Cyan"></div>
+                    <div class="color-swatch" style="background: #a855f7;" data-color="#a855f7" title="Violet"></div>
+                    <div class="color-swatch" style="background: #f43f5e;" data-color="#f43f5e" title="Sakura"></div>
+                    <div class="color-swatch" style="background: #f59e0b;" data-color="#f59e0b" title="Amber"></div>
+                    <div class="color-swatch" style="background: #10b981;" data-color="#10b981" title="Emerald"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transition Style & Animation Intensity -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Transition Styles &amp; Ambient Motion</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Adjust crossfade mechanics and Ken Burns subtle drift speed. Reduced motion mode available for accessibility.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Transition Effect</label>
+                  <select id="setting-transition">
+                    <option value="random" selected>✨ Random Cinematic (Cycles Styles)</option>
+                    <option value="crossfade">Smooth Crossfade</option>
+                    <option value="cinematic">Cinematic Fade (Atmospheric Dip)</option>
+                    <option value="slow-zoom">Slow Zoom &amp; Dissolve</option>
+                    <option value="pan-dissolve">Pan &amp; Dissolve</option>
+                    <option value="instant">Minimal Instant Cut</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label>Transition Duration</label>
+                  <select id="setting-transition-duration">
+                    <option value="1.5">Snappy (1.5s)</option>
+                    <option value="2.5" selected>Smooth (2.5s)</option>
+                    <option value="4.0">Cinematic Slow (4.0s)</option>
+                    <option value="6.0">Atmospheric Dissolve (6.0s)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-row-split" style="margin-top: 0.5rem;">
+                <div class="setting-group">
+                  <label>Ambient Ken Burns Motion</label>
+                  <select id="setting-motion">
+                    <option value="random" selected>✨ Random Organic (Subtle Zoom &amp; Pan)</option>
+                    <option value="zoom-in">Slow Zoom In</option>
+                    <option value="zoom-out">Slow Zoom Out</option>
+                    <option value="pan-left">Subtle Pan Left</option>
+                    <option value="pan-right">Subtle Pan Right</option>
+                    <option value="pan-up">Subtle Tilt Up</option>
+                    <option value="pan-down">Subtle Tilt Down</option>
+                    <option value="none">Static (No Motion)</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label>Motion Intensity</label>
+                  <select id="setting-motion-intensity">
+                    <option value="subtle">Subtle (Ultra-slow ambient drift)</option>
+                    <option value="normal" selected>Normal (Standard cinematic motion)</option>
+                    <option value="dynamic">Dynamic (Expressive camera sweep)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="toggle-row" style="margin-top: 0.4rem;">
+                <input type="checkbox" id="setting-reduced-motion">
+                <span style="font-size: 0.82rem;">Respect Reduced Motion (Disables continuous panning/zooming for accessibility)</span>
+              </div>
+            </div>
+
+            <!-- Particle Settings -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Ambient Particle System</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Canvas-rendered cosmic micro-star particles drifting gently across the viewport.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <div class="toggle-row">
+                    <input type="checkbox" id="setting-particles" checked>
+                    <span style="font-size: 0.84rem; font-weight: 600;">Enable Subtle Ambiance Particles</span>
+                  </div>
+                </div>
+                <div class="setting-group" style="display: flex; gap: 0.8rem;">
+                  <div style="flex: 1;">
+                    <label style="font-size: 0.75rem; color: var(--text-dim);">Particle Density</label>
+                    <select id="setting-particle-density" class="lib-select" style="font-size: 0.78rem;">
+                      <option value="low">Low (25 stars)</option>
+                      <option value="medium" selected>Medium (50 stars)</option>
+                      <option value="high">High (100 stars)</option>
+                    </select>
+                  </div>
+                  <div style="flex: 1;">
+                    <label style="font-size: 0.75rem; color: var(--text-dim);">Drift Speed</label>
+                    <select id="setting-particle-speed" class="lib-select" style="font-size: 0.78rem;">
+                      <option value="slow">Slow</option>
+                      <option value="normal" selected>Normal</option>
+                      <option value="fast">Fast</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- HUD Opacity & OLED Care -->
+            <div class="oled-protection-box setting-card">
+              <div class="oled-header-row">
+                <div>
+                  <label style="color: var(--dynamic-accent); font-weight: 700; font-size: 0.92rem;">🛡️ HUD Opacity &amp; OLED Care</label>
+                  <p class="oled-subtext">Immediate live opacity preview, inactivity dimming, and pixel shift protection</p>
+                </div>
+                <input type="checkbox" id="setting-oled-enabled" checked title="Master OLED Protection Toggle">
+              </div>
+
+              <div id="oled-subcontrols" class="oled-subcontrols" style="margin-top: 0.75rem;">
+                <div class="setting-row-split">
+                  <div class="setting-subgroup">
+                    <div class="range-row">
+                      <span class="range-title">Active HUD Opacity:</span>
+                      <input type="range" id="setting-hud-base-opacity" min="40" max="100" step="5" value="100">
+                      <span id="setting-hud-base-opacity-label" class="range-val">100%</span>
+                    </div>
+                  </div>
+                  <div class="setting-subgroup">
+                    <div class="range-row">
+                      <span class="range-title">Idle Dimmed Opacity:</span>
+                      <input type="range" id="setting-oled-idle-opacity" min="0" max="40" step="5" value="15">
+                      <span id="setting-oled-idle-opacity-label" class="range-val">15%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-row-split" style="margin-top: 0.5rem;">
+                  <div class="setting-subgroup">
+                    <div class="range-row">
+                      <span class="range-title">Darkening Scrim:</span>
+                      <input type="range" id="setting-oled-scrim" min="0" max="60" step="5" value="0">
+                      <span id="setting-oled-scrim-label" class="range-val">0%</span>
+                    </div>
+                  </div>
+                  <div class="setting-subgroup">
+                    <label style="font-size: 0.78rem; color: var(--text-dim);">Low-Brightness Night Mode</label>
+                    <select id="setting-oled-night-mode" style="font-size: 0.78rem;">
+                      <option value="off" selected>Off (Standard Daylight Balance)</option>
+                      <option value="auto">Auto (21:00 – 07:00 Dimmed &amp; Warm)</option>
+                      <option value="always">Always Active (Ultra-Dim Midnight)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.6rem;">
+                  <div class="toggle-row">
+                    <input type="checkbox" id="setting-oled-auto-dim" checked>
+                    <span style="font-size: 0.78rem;">Inactivity Auto-Dim (3.5s Idle)</span>
+                  </div>
+                  <div class="toggle-row">
+                    <input type="checkbox" id="setting-oled-hud-shift" checked>
+                    <span style="font-size: 0.78rem;">Periodic HUD Shift (10–15 min)</span>
+                  </div>
+                  <div class="toggle-row">
+                    <input type="checkbox" id="setting-oled-wp-shift" checked>
+                    <span style="font-size: 0.78rem;">Wallpaper Pixel Micro-Drift</span>
+                  </div>
+                  <div class="toggle-row">
+                    <input type="checkbox" id="setting-oled-soft-white" checked>
+                    <span style="font-size: 0.78rem;">Soft White (Glare Limiter)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional Ambient Soundscapes -->
+            <div class="soundscape-box setting-card">
+              <div class="soundscape-header">
+                <span class="soundscape-icon">🎧</span>
+                <div>
+                  <label style="color: #34D399; font-weight: 700; font-size: 0.92rem;">Ambient Soundscape (Optional)</label>
+                  <div style="font-size: 0.72rem; color: var(--text-dim);">Locally synthesized nature audio, seamless looping, and crossfade (starts muted).</div>
+                </div>
+              </div>
+              <div style="margin-top: 0.6rem;">
+                <label class="checkbox-label" style="font-size: 0.85rem; font-weight: 600;">
+                  <input type="checkbox" id="setting-soundscape-enabled">
+                  <span>Enable Ambient Soundscapes (Key: A to mute/unmute)</span>
+                </label>
+              </div>
+
+              <div id="soundscape-subcontrols" class="soundscape-subcontrols disabled" style="margin-top: 0.6rem;">
+                <div class="setting-group">
+                  <label for="setting-soundscape-track">Soundscape Environment</label>
+                  <select id="setting-soundscape-track">
+                    <option value="rain">🌧️ Rain (Gentle rhythmic rainfall &amp; droplets)</option>
+                    <option value="thunderstorm">⛈️ Thunderstorm (Rolling thunder &amp; storm)</option>
+                    <option value="japanese_forest">🎋 Japanese Forest (Bamboo rustle &amp; wind chimes)</option>
+                    <option value="night_city">🌃 Night City Ambience (Metropolitan hum &amp; drone)</option>
+                    <option value="ocean_waves">🌊 Ocean Waves (Rolling surf &amp; coastal swells)</option>
+                    <option value="wind">💨 Wind (Mountain gusts &amp; breezes)</option>
+                    <option value="fireplace">🔥 Fireplace (Warm hearth &amp; crackling embers)</option>
+                    <option value="space_ambience">🌌 Space Ambience (Deep celestial cosmic drone)</option>
+                  </select>
+                </div>
+                <div class="setting-row-split" style="margin-top: 0.5rem;">
+                  <div class="setting-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                      <label style="margin: 0; font-size: 0.78rem;">Volume</label>
+                      <button type="button" id="btn-soundscape-mute" class="compact-btn" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; color: var(--text-main); cursor: pointer;">Muted 🔇</button>
+                    </div>
+                    <div class="range-row">
+                      <input type="range" id="setting-soundscape-volume" min="0" max="100" step="5" value="40">
+                      <span id="setting-soundscape-vol-label" style="font-size: 0.8rem; font-family: var(--font-mono); color: #34D399; font-weight: 600;">40%</span>
+                    </div>
+                  </div>
+                  <div class="setting-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                      <label style="margin: 0; font-size: 0.78rem;">Crossfade</label>
+                      <span id="setting-soundscape-fade-label" style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-dim);">2.5s</span>
+                    </div>
+                    <div class="range-row">
+                      <input type="range" id="setting-soundscape-crossfade" min="0.5" max="6.0" step="0.5" value="2.5">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- 4. DISPLAY SECTION -->
+          <!-- ========================================================= -->
+          <div id="section-display" class="control-center-section hidden" data-section="display">
+            <!-- Target Monitor & Orientation -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Target Monitor &amp; Display Orientation</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Queries Windows EnumDisplayMonitors API to automatically target secondary or primary screens with virtual desktop coordinates.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Target Display (Windows Multi-Monitor)</label>
+                  <select id="setting-monitor">
+                    <option value="auto">Auto (Match Active Viewport)</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label>Display Orientation</label>
+                  <select id="setting-display-orientation" class="lib-select">
+                    <option value="auto" selected>Auto (Follow Physical Orientation)</option>
+                    <option value="landscape">Landscape (16:9 / 16:10 Horizontal)</option>
+                    <option value="ultrawide">Ultrawide (21:9 / 32:9 Panoramic)</option>
+                    <option value="portrait">Portrait (9:16 Pivot / Vertical)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resolution & Scaling -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Resolution &amp; High-DPI Scaling</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Supports high-DPI Windows display scaling (125%, 150%, 200%) and provides manual UI zoom adjustments.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <div class="toggle-row" style="margin-top: 0.35rem;">
+                    <input type="checkbox" id="setting-win-scaling" checked>
+                    <span style="font-size: 0.84rem;">Support Windows High-DPI Display Scaling</span>
+                  </div>
+                  <div class="stats-box" style="margin-top: 0.6rem; padding: 0.5rem; background: rgba(0,0,0,0.25); border-radius: 6px;">
+                    <div class="stat-line"><span>Active Viewport:</span> <strong id="stat-viewport-res">1920 × 1080 (16:9)</strong></div>
+                    <div class="stat-line"><span>Reported DPI Scale:</span> <strong id="stat-dpi-scale">100% (1.0x)</strong></div>
+                    <div class="stat-line"><span>Active Display:</span> <strong id="stat-active-monitor">Auto</strong></div>
+                  </div>
+                </div>
+                <div class="setting-group">
+                  <label>UI Zoom Scale Factor</label>
+                  <select id="setting-ui-scale" class="lib-select">
+                    <option value="85%">Compact (85%)</option>
+                    <option value="100%" selected>Standard 100% (Native)</option>
+                    <option value="115%">Comfortable (115%)</option>
+                    <option value="125%">Large (125% for 4K)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Wallpaper Fitting & Focal Protection -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Wallpaper Fitting &amp; Focal-Point Protection</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Hardware-composited fitting modes: Fill (Cover), Fit (Contain), and Original 1:1. Blurred background eliminates harsh letterboxes.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Default Fitting Mode</label>
+                  <select id="setting-wp-fit-mode" class="lib-select">
+                    <option value="fill" selected>Fill / Cover (Anchored at focal point)</option>
+                    <option value="fit">Fit / Contain (Uncropped with backdrop fill)</option>
+                    <option value="original">Original Size (1:1 Native unscaled)</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label>Character Focal Point (Anti-Crop)</label>
+                  <select id="setting-focal-point">
+                    <option value="auto" selected>Intelligent Character Focus (Preserve Head &amp; Eyes)</option>
+                    <option value="top">Upper Focus (Face &amp; Eyes 28%)</option>
+                    <option value="center">Strict Center (50% 50%)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-row-split" style="margin-top: 0.5rem;">
+                <div class="setting-group">
+                  <div class="toggle-row" style="margin-top: 0.35rem;">
+                    <input type="checkbox" id="setting-comp-blur-enabled" checked>
+                    <span style="font-size: 0.82rem;">Blurred Ambient Background Fill (for Fit Mode)</span>
+                  </div>
+                </div>
+                <div class="setting-group">
+                  <label>Backdrop Blur Radius</label>
+                  <div class="range-row">
+                    <input type="range" id="setting-comp-blur-intensity" min="10" max="50" step="2" value="28">
+                    <span id="setting-comp-blur-label">28px</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- 5. PERFORMANCE SECTION -->
+          <!-- ========================================================= -->
+          <div id="section-performance" class="control-center-section hidden" data-section="performance">
+            <!-- Prefetch & Cache Limit -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Prefetch Queue &amp; Disk Cache Management</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Prefetch buffer keeps upcoming candidates cached ahead of time. Bounded LRU cache enforces strict maximum disk usage in .cache/wallpapers/.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Prefetch Queue Buffer Size</label>
+                  <div class="range-row">
+                    <input type="range" id="setting-perf-prefetch" min="3" max="15" step="1" value="6">
+                    <span id="setting-perf-prefetch-label">6 slides</span>
+                  </div>
+                </div>
+                <div class="setting-group">
+                  <label>Disk Cache Limit (Bounded LRU)</label>
+                  <div class="range-row">
+                    <input type="range" id="setting-perf-cache-limit" min="500" max="5000" step="250" value="2048">
+                    <span id="setting-perf-cache-limit-label">2048 MB (2.0 GB)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Worker Threads & Concurrent Downloads -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Background Worker Concurrency &amp; Limits</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Controls standard library threading pools for prefetching and favorites downloads. Lower settings reduce CPU usage on lightweight hardware.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Worker Thread Pool Count</label>
+                  <select id="setting-perf-workers" class="lib-select">
+                    <option value="1">1 Worker (Minimal CPU)</option>
+                    <option value="2" selected>2 Workers (Balanced / Recommended)</option>
+                    <option value="3">3 Workers (Fast)</option>
+                    <option value="4">4 Workers (Maximum Speed)</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label>Max Concurrent Image Downloads</label>
+                  <select id="setting-perf-download-limit" class="lib-select">
+                    <option value="1">1 Concurrent</option>
+                    <option value="2" selected>2 Concurrent (Recommended)</option>
+                    <option value="3">3 Concurrent</option>
+                    <option value="4">4 Concurrent</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Animation Quality & Hardware Acceleration -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Graphics Rendering &amp; Animation Quality</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Configures GPU rendering frame rate target and hardware transform compositing.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Target Animation Quality / Frame Rate</label>
+                  <select id="setting-perf-anim-quality" class="lib-select">
+                    <option value="60fps" selected>60 FPS Smooth (Full GPU Hardware Compositing)</option>
+                    <option value="30fps">30 FPS Power Saver (Low CPU / Battery Mode)</option>
+                    <option value="reduced">Reduced Motion (Static Presentation)</option>
+                  </select>
+                </div>
+                <div class="setting-group stats-box" style="padding: 0.5rem; background: rgba(0,0,0,0.25); border-radius: 6px;">
+                  <div class="stat-line"><span>Total Art Seen:</span> <strong id="stat-total-seen">0</strong></div>
+                  <div class="stat-line"><span>Saved Favorites:</span> <strong id="stat-favorites-count">0</strong></div>
+                  <div class="stat-line"><span>Cache Utilization:</span> <strong id="stat-cache-utilization">0 MB / 2048 MB</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========================================================= -->
+          <!-- 6. PRIVACY SECTION -->
+          <!-- ========================================================= -->
+          <div id="section-privacy" class="control-center-section hidden" data-section="privacy">
+            <!-- Local History & Privacy Policy -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Local-First History &amp; Zero-Tracking Guarantee</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">All interaction logs, seen art records, taste scores, and favorites are kept strictly in local SQLite WAL files on your disk. Zero telemetry or external reporting.</span>
+                </span>
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45;">
+                KURO operates strictly offline-first. Your wallpaper viewing history, interaction events (dwell time, skips, revisits), and taste models are processed entirely on your local machine using standard library SQLite WAL transactions. No telemetry, user identifiers, or personal data ever leave your system.
+              </p>
+              <div style="display: flex; gap: 0.8rem; margin-top: 0.5rem;">
+                <button id="btn-clear-history" class="text-danger-btn" style="flex: 1; padding: 0.45rem 0.85rem; font-size: 0.78rem;">↺ Reset Seen Wallpapers History</button>
+                <button id="btn-purge-cache" class="secondary-btn btn-sm" style="flex: 1; padding: 0.45rem 0.85rem; font-size: 0.78rem;">🗑️ Purge Local Wallpaper Cache</button>
+              </div>
+            </div>
+
+            <!-- Taste Learning Engine Controls -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Taste Learning &amp; Preference State</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Inspect learning event counts or reset the local preference model back to neutral.</span>
+                </span>
+              </div>
+              <div class="rec-stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; background: rgba(0,0,0,0.3); padding: 0.6rem; border-radius: 6px; font-size: 0.75rem;">
+                <div><span style="color: #94A3B8;">Dwell Sessions:</span> <strong id="rec-stat-dwell" style="color: #6EE7B7;">0</strong></div>
+                <div><span style="color: #94A3B8;">Total Skips:</span> <strong id="rec-stat-skips" style="color: #F87171;">0</strong></div>
+                <div><span style="color: #94A3B8;">Total Revisits:</span> <strong id="rec-stat-revisits" style="color: #60A5FA;">0</strong></div>
+              </div>
+              <div style="margin-top: 0.6rem; display: flex; justify-content: flex-end;">
+                <button id="btn-rec-reset" class="text-danger-btn" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">↺ Reset Learning History to Neutral</button>
+              </div>
+            </div>
+
+            <!-- Database Health & Integrity -->
+            <div class="db-health-card setting-card">
+              <div class="db-health-header">
+                <div class="setting-card-title" style="margin-bottom: 0;">
+                  <span>🛡️ Database Integrity &amp; Health</span>
+                  <span class="tooltip-wrap">
+                    <span class="tooltip-icon">ℹ️</span>
+                    <span class="tooltip-box">Performs transactional PRAGMA integrity_check, quick_check, and foreign_key_check to detect corruption and verify database consistency.</span>
+                  </span>
+                </div>
+                <span id="db-integrity-badge" class="db-health-badge healthy">● Healthy (WAL Mode)</span>
+              </div>
+              <div class="db-metrics-grid">
+                <div class="db-metric-item">
+                  <span class="metric-label">Schema Version</span>
+                  <span id="db-metric-schema" class="metric-val">v13</span>
+                </div>
+                <div class="db-metric-item">
+                  <span class="metric-label">Tables</span>
+                  <span id="db-metric-tables" class="metric-val">17</span>
+                </div>
+                <div class="db-metric-item">
+                  <span class="metric-label">DB Size</span>
+                  <span id="db-metric-size" class="metric-val">0 B</span>
+                </div>
+                <div class="db-metric-item">
+                  <span class="metric-label">WAL Size</span>
+                  <span id="db-metric-wal" class="metric-val">0 B</span>
+                </div>
+              </div>
+              <div style="margin-top: 0.65rem; display: flex; justify-content: flex-end;">
+                <button id="btn-check-integrity" class="secondary-btn btn-sm" style="font-size: 0.75rem;">🔍 Check Database Integrity Now</button>
+              </div>
+            </div>
+
+            <!-- Complete Backup & Recovery Suite -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>📦 Complete Backup &amp; Recovery Suite</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Safely snapshots SQLite database via the online SQLite Backup API with SHA-256 manifest validation. Automatically creates pre-migration and pre-restore snapshots.</span>
+                </span>
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45;">
+                Export self-contained versioned backup archives containing your complete wallpaper history, favorites, taste model, and settings. Restorations require confirmation and automatically create a pre-restore safety snapshot first.
+              </p>
+              
+              <!-- Backup Creation Options -->
+              <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 0.65rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                  <label class="checkbox-label" style="font-size: 0.78rem;">
+                    <input type="checkbox" id="chk-backup-favorites" checked>
+                    <span>Include Saved Favorites (<span style="color: #6EE7B7;">favorites/</span>)</span>
+                  </label>
+                  <label class="checkbox-label" style="font-size: 0.78rem;">
+                    <input type="checkbox" id="chk-backup-cache">
+                    <span>Include Cached Wallpapers (<span style="color: #93C5FD;">.cache/</span>)</span>
+                  </label>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <input type="text" id="input-backup-note" placeholder="Optional backup note (e.g. Before Windows update)..." class="compact-input" style="flex: 1; font-size: 0.78rem; padding: 0.35rem 0.55rem;">
+                  <button id="btn-create-backup" class="primary-save-btn btn-sm" style="font-size: 0.78rem; padding: 0.4rem 0.9rem; white-space: nowrap;">📦 Create Backup Archive</button>
+                </div>
+              </div>
+
+              <!-- Available Local Backups -->
+              <div style="margin-top: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                  <span style="font-size: 0.78rem; font-weight: 600; color: #CBD5E1;">Available Backups &amp; Snapshots</span>
+                  <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    <button id="btn-upload-backup" class="secondary-btn btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem;">📤 Upload Archive (.zip)</button>
+                    <input type="file" id="input-upload-backup-file" accept=".zip,.kurobackup" style="display: none;" />
+                    <button id="btn-refresh-backups" class="subtle-btn" style="font-size: 0.75rem;" title="Refresh Backups">🔄</button>
+                  </div>
+                </div>
+
+                <div id="backup-list-container" class="backup-item-list">
+                  <!-- Dynamically populated with backup cards -->
+                </div>
+                <div id="backup-list-empty" class="library-empty-state" style="padding: 1rem; margin-top: 0.4rem;">
+                  <div style="font-size: 0.78rem; color: #94A3B8;">No local backups found. Click "Create Backup Archive" to export your first snapshot.</div>
+                </div>
+              </div>
+
+              <!-- Automatic Backup Retention Setting -->
+              <div style="margin-top: 0.6rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                <span>Automatic Snapshots Retention Limit (Oldest pruned automatically):</span>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                  <input type="number" id="setting-max-auto-backups" min="1" max="20" value="5" class="compact-input" style="width: 55px; text-align: center; font-size: 0.78rem;">
+                  <span>snapshots</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Export & Import & Application Reset -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>Backup, Export &amp; Application Reset</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Export your complete configuration into a portable JSON backup file, import saved setups, or reset all preferences safely without deleting downloaded favorites.</span>
+                </span>
+              </div>
+              <div style="display: flex; gap: 0.65rem; flex-wrap: wrap;">
+                <button id="btn-export-settings" class="secondary-btn btn-sm" style="flex: 1;">📥 Export Settings (.json)</button>
+                <button id="btn-import-settings" class="secondary-btn btn-sm" style="flex: 1;">📤 Import Settings (.json)</button>
+                <input type="file" id="input-import-settings" accept=".json" style="display: none;" />
+                <button id="btn-factory-reset" class="text-danger-btn btn-sm" style="flex: 1; border: 1px solid rgba(239, 68, 68, 0.4);">⚠️ Factory Reset Preferences</button>
+              </div>
+              <div style="margin-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.75rem;">
+                <button id="btn-settings-exit" class="secondary-btn" style="width: 100%; border-color: rgba(239, 68, 68, 0.4); color: #F87171; font-size: 0.8rem; padding: 0.5rem;">⏻ Exit Screensaver Cleanly (Ctrl+Q)</button>
+              </div>
+            </div>
+
+            <!-- Keyboard Reference Guide -->
+            <div class="keyboard-guide" style="margin-top: 0.5rem; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 0.75rem;">
+              <h4 style="font-size: 0.82rem; margin-bottom: 0.4rem; color: #E2E8F0;">⌨️ Keyboard Shortcuts Reference</h4>
+              <ul style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.35rem; font-size: 0.75rem; list-style: none;">
+                <li><kbd>Space</kbd> Pause / Resume</li>
+                <li><kbd>→</kbd> / <kbd>←</kbd> Next / Previous Art</li>
+                <li><kbd>M</kbd> Cycle Mode (Ambient / Cinematic / Dashboard)</li>
+                <li><kbd>I</kbd> Artwork Information Panel</li>
+                <li><kbd>O</kbd> Composition &amp; Focal Crop</li>
+                <li><kbd>F</kbd> / <kbd>F11</kbd> Fullscreen</li>
+                <li><kbd>H</kbd> Hide / Show HUD</li>
+                <li><kbd>L</kbd> Favorite Artwork</li>
+                <li><kbd>C</kbd> Collection Library</li>
+                <li><kbd>B</kbd> Blacklist Artwork</li>
+                <li><kbd>A</kbd> Ambient Soundscape Mute / Unmute</li>
+                <li><kbd>S</kbd> Control Center Dialog</li>
+                <li><kbd>Ctrl+Q</kbd> Exit Screensaver Cleanly</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 7. CONTENT SAFETY & MODERATION SECTION -->
+        <!-- ========================================================= -->
+        <div id="section-moderation" class="control-center-section hidden" data-section="moderation">
+          <!-- Unified Content Safety Policy -->
+          <div class="setting-card">
+            <div class="setting-card-title">
+              <span>🛡️ Content Safety &amp; Moderation Policy</span>
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">ℹ️</span>
+                <span class="tooltip-box">Strict application-wide SFW content policy. Images with missing tags, ambiguous ratings, or explicit content are blocked automatically.</span>
+              </span>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45;">
+              KURO enforces an uncompromising safety standard: only verified SFW anime artwork is permitted on screen. Provider query parameters are never trusted alone; tags and metadata completeness are independently audited. Unsafe or ambiguous artwork is excluded or diverted to manual review.
+            </p>
+            <div class="setting-row-split" style="margin-top: 0.6rem;">
+              <div class="setting-group">
+                <label class="checkbox-label" style="font-size: 0.82rem; font-weight: 600;">
+                  <input type="checkbox" id="setting-mod-strict-mode" checked>
+                  <span>Strict Moderation Mode (Zero-tolerance SFW policy)</span>
+                </label>
+                <label class="checkbox-label" style="font-size: 0.82rem; margin-top: 0.4rem;">
+                  <input type="checkbox" id="setting-mod-allow-review" checked>
+                  <span>Route ambiguous artwork to Manual Review Queue</span>
+                </label>
+                <label class="checkbox-label" style="font-size: 0.82rem; margin-top: 0.4rem;">
+                  <input type="checkbox" id="setting-mod-autoblock-reported" checked>
+                  <span>Auto-block reported artwork immediately</span>
+                </label>
+              </div>
+              <div class="setting-group">
+                <label for="setting-mod-min-tags">Minimum Verified Tags Required</label>
+                <input type="number" id="setting-mod-min-tags" min="1" max="10" value="1" class="compact-input" style="width: 100px;">
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 0.35rem;">
+                  Artworks with fewer than this number of descriptive tags are treated as ambiguous and rejected.
+                </div>
+                <div style="margin-top: 0.6rem;">
+                  <button id="btn-save-mod-policy" class="small-btn primary-save-btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">Save Policy Settings</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Blocked Entities Manager -->
+          <div class="setting-card">
+            <div class="setting-card-title">
+              <span>🚫 Blocked Entities (Artwork, Tags, Characters, Artists, Franchises)</span>
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">ℹ️</span>
+                <span class="tooltip-box">Manage custom blocked items. Artwork matching any blocked item will be permanently excluded from retrieval, prefetch, and display.</span>
+              </span>
+            </div>
+
+            <!-- Add Block Form -->
+            <div class="block-add-row" style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem; align-items: flex-end;">
+              <div style="width: 130px;">
+                <label style="font-size: 0.72rem; color: var(--text-muted);">Entity Type</label>
+                <select id="input-block-type" class="lib-select" style="padding: 0.4rem; font-size: 0.78rem;">
+                  <option value="artwork">Artwork ID</option>
+                  <option value="tag">Tag</option>
+                  <option value="character">Character</option>
+                  <option value="artist">Artist / Uploader</option>
+                  <option value="franchise">Franchise</option>
+                </select>
+              </div>
+              <div style="flex: 2;">
+                <label style="font-size: 0.72rem; color: var(--text-muted);">Entity Value</label>
+                <input type="text" id="input-block-value" placeholder="e.g. bikini, ecchi, character name..." style="padding: 0.4rem 0.6rem; font-size: 0.78rem; width: 100%;" />
+              </div>
+              <div style="flex: 2;">
+                <label style="font-size: 0.72rem; color: var(--text-muted);">Reason (Optional)</label>
+                <input type="text" id="input-block-reason" placeholder="e.g. Unsafe content" style="padding: 0.4rem 0.6rem; font-size: 0.78rem; width: 100%;" />
+              </div>
+              <button id="btn-add-block" class="small-btn primary-save-btn" style="padding: 0.4rem 0.9rem; font-size: 0.78rem;">+ Add Block</button>
+            </div>
+
+            <!-- Filter Pills for Blocked List -->
+            <div class="block-filter-bar" style="display: flex; gap: 0.4rem; margin-bottom: 0.6rem;">
+              <button class="block-filter-pill active" data-bfilter="all">All</button>
+              <button class="block-filter-pill" data-bfilter="artwork">Artworks</button>
+              <button class="block-filter-pill" data-bfilter="tag">Tags</button>
+              <button class="block-filter-pill" data-bfilter="character">Characters</button>
+              <button class="block-filter-pill" data-bfilter="artist">Artists</button>
+              <button class="block-filter-pill" data-bfilter="franchise">Franchises</button>
+            </div>
+
+            <!-- Blocked Items List -->
+            <div id="blocked-entities-list" class="blocked-items-container" style="max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 6px; padding: 0.5rem; font-size: 0.75rem;">
+              <div style="color: var(--text-dim); text-align: center; padding: 0.8rem;">Loading blocked entities...</div>
+            </div>
+          </div>
+
+          <!-- Manual Review Queue -->
+          <div class="setting-card">
+            <div class="setting-card-title">
+              <span>📋 Manual Review Queue (Ambiguous Artwork)</span>
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">ℹ️</span>
+                <span class="tooltip-box">Artworks with ambiguous safety ratings or unverified metadata held in quarantine. Inspect and approve or permanently reject.</span>
+              </span>
+            </div>
+            <div id="review-queue-list" class="review-queue-container" style="max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 6px; padding: 0.5rem; font-size: 0.75rem;">
+              <div style="color: var(--text-dim); text-align: center; padding: 0.8rem;">No items currently in review queue.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Center Footer: Validation & Actions -->
+      <div class="control-center-footer">
+        <div class="footer-status">
+          <span id="settings-validation-badge" class="validation-badge valid">✓ All settings valid</span>
+          <span id="settings-changes-badge" class="changes-badge hidden">Unsaved preview</span>
+        </div>
+        <div class="footer-actions">
+          <button id="btn-settings-cancel" class="secondary-btn" style="padding: 0.5rem 1.15rem;">Cancel</button>
+          <button id="btn-settings-save" class="small-btn primary-save-btn">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       VISUAL WALLPAPER HISTORY EXPLORER MODAL
+       ========================================================================== -->
+  <div id="history-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Visual Wallpaper History Explorer">
+    <div class="modal-card history-card">
+      <div class="modal-header">
+        <div class="history-header-title">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.3rem;">📜</span>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #f8fafc;">Wallpaper History Explorer</h3>
+            <span id="hist-total-badge" class="perf-status-badge profile-auto">0 DISPLAYED</span>
+          </div>
+          <span class="library-header-subtitle">Chronological archive of all previously rendered anime artwork</span>
+        </div>
+        <div class="history-header-actions">
+          <button id="btn-hist-export-json" class="backup-btn-sm" title="Export complete history metadata as JSON">📥 Export JSON</button>
+          <button id="btn-hist-export-csv" class="backup-btn-sm" title="Export complete history metadata as CSV">📊 Export CSV</button>
+          <button id="btn-history-close" class="close-btn" title="Close Explorer (Esc / Y)">&times;</button>
+        </div>
+      </div>
+
+      <!-- History Toolbar with Filters, Search, and Sorters -->
+      <div class="history-toolbar">
+        <div class="history-search-group">
+          <div class="library-search-box" style="flex: 1; min-width: 200px;">
+            <input type="text" id="hist-search-input" placeholder="Search franchise, character, ID..." />
+            <button id="hist-search-clear" class="subtle-btn hidden">&times;</button>
+          </div>
+          <button id="btn-hist-fav-toggle" class="history-filter-pill" title="Toggle favorites only">⭐ Favorites Only</button>
+        </div>
+
+        <div class="history-filters-group">
+          <!-- Franchise Filter -->
+          <select id="hist-filter-franchise" class="lib-select" title="Filter by anime franchise">
+            <option value="all">All Franchises</option>
+          </select>
+
+          <!-- Date Filter -->
+          <select id="hist-filter-date" class="lib-select" title="Filter by display date">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">Past 7 Days</option>
+            <option value="month">Past 30 Days</option>
+          </select>
+
+          <!-- Resolution Filter -->
+          <select id="hist-filter-res" class="lib-select" title="Filter by resolution">
+            <option value="all">All Resolutions</option>
+            <option value="4k">4K UHD (3840+)</option>
+            <option value="1440p">1440p QHD</option>
+            <option value="1080p">1080p FHD</option>
+            <option value="ultrawide">Ultrawide (21:9)</option>
+            <option value="portrait">Portrait (9:16)</option>
+          </select>
+
+          <!-- Sort Order -->
+          <select id="hist-sort-by" class="lib-select" title="Sort wallpapers">
+            <option value="newest">🕒 Newest First</option>
+            <option value="oldest">⏳ Oldest First</option>
+            <option value="popularity">🔥 Popularity</option>
+            <option value="quality">★ Technical Quality</option>
+          </select>
+
+          <button id="btn-hist-refresh" class="icon-btn-tiny" title="Refresh History" style="width: 30px; height: 30px;">🔄</button>
+          <button id="btn-hist-reset-filters" class="secondary-btn" title="Reset all filters" style="font-size: 0.72rem; padding: 0.3rem 0.6rem;">Reset</button>
+        </div>
+      </div>
+
+      <!-- Results Subheader -->
+      <div class="history-results-bar">
+        <span id="hist-results-count" class="history-results-count">Showing 0 wallpapers</span>
+        <span id="hist-active-filters-label" class="history-active-filters-label"></span>
+      </div>
+
+      <!-- Thumbnail Grid Container -->
+      <div class="history-body">
+        <div id="history-grid" class="history-grid">
+          <!-- Dynamically populated with history cards -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="history-empty" class="library-empty-state hidden">
+          <div class="empty-icon">📜</div>
+          <h4>No Wallpapers Found in History</h4>
+          <p id="history-empty-desc">As the screensaver displays anime artwork, each rendered wallpaper will be indexed here with full metadata, resolution, and timestamps.</p>
+        </div>
+      </div>
+
+      <!-- Pagination & Paging Footer -->
+      <div class="history-footer">
+        <div class="history-pagination" id="history-pagination">
+          <button id="btn-hist-first" class="hist-page-btn" title="First Page">«</button>
+          <button id="btn-hist-prev" class="hist-page-btn" title="Previous Page">‹</button>
+          <span class="hist-page-indicator">Page <strong id="hist-current-page">1</strong> of <span id="hist-total-pages">1</span></span>
+          <button id="btn-hist-next" class="hist-page-btn" title="Next Page">›</button>
+          <button id="btn-hist-last" class="hist-page-btn" title="Last Page">»</button>
+        </div>
+        <div class="history-page-size-selector">
+          <label style="font-size: 0.75rem; color: #94a3b8;">Page Size:</label>
+          <select id="hist-page-size" class="lib-select" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;">
+            <option value="12">12</option>
+            <option value="24" selected>24</option>
+            <option value="48">48</option>
+            <option value="96">96</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection & Personal Library Management Modal -->
+  <div id="library-modal" class="modal-backdrop hidden">
+    <div class="modal-card library-card">
+      <div class="modal-header">
+        <div class="library-header-title">
+          <h3>📁 Personal Anime Wallpaper Library</h3>
+          <span class="library-header-subtitle">Collections, Favorites & Storage Manager</span>
+        </div>
+        <button id="btn-library-close" class="close-btn">&times;</button>
+      </div>
+
+      <!-- Library Navigation Tabs -->
+      <div class="library-tabs">
+        <button class="library-tab-btn" data-tab="history" id="lib-tab-history-btn">📜 History</button>
+        <button class="library-tab-btn active" data-tab="favorites">⭐ Favorites (<span id="lib-tab-fav-count">0</span>)</button>
+        <button class="library-tab-btn" data-tab="collections">🗂️ Custom Collections (<span id="lib-tab-col-count">0</span>)</button>
+        <button class="library-tab-btn" data-tab="blacklist">🚫 Blacklist (<span id="lib-tab-bl-count">0</span>)</button>
+        <button class="library-tab-btn" data-tab="stats">📊 Storage & Stats</button>
+      </div>
+
+      <div class="modal-body library-body">
+        <!-- TAB 1: FAVORITES -->
+        <div id="tab-content-favorites" class="library-tab-panel active">
+          <div class="library-toolbar">
+            <div class="library-search-box">
+              <input type="text" id="fav-search-input" placeholder="Search by character, franchise, ID..." />
+              <button id="fav-search-clear" class="subtle-btn hidden">&times;</button>
+            </div>
+            <div class="library-filters">
+              <select id="fav-filter-franchise" class="lib-select">
+                <option value="all">All Franchises</option>
+              </select>
+              <select id="fav-filter-res" class="lib-select">
+                <option value="all">All Resolutions</option>
+                <option value="3840x2160">4K (3840×2160)</option>
+                <option value="2560x1440">1440p (2560×1440)</option>
+                <option value="1920x1080">1080p (1920×1080)</option>
+                <option value="3440x1440">Ultrawide (3440×1440)</option>
+              </select>
+              <button id="btn-refresh-favorites" class="secondary-btn" title="Refresh Favorites">🔄</button>
+            </div>
+          </div>
+          <div id="favorites-grid" class="wallpaper-card-grid">
+            <!-- Dynamically populated -->
+          </div>
+          <div id="favorites-empty" class="library-empty-state hidden">
+            <div class="empty-icon">⭐</div>
+            <h4>No Favorites Found</h4>
+            <p>Save high-resolution anime art while browsing by clicking the heart button or pressing <kbd>L</kbd>.</p>
+          </div>
+        </div>
+
+        <!-- TAB 2: COLLECTIONS -->
+        <div id="tab-content-collections" class="library-tab-panel">
+          <div class="collections-container">
+            <!-- Sidebar: Collections List -->
+            <div class="collections-sidebar">
+              <div class="collections-sidebar-header">
+                <h4>Collections</h4>
+                <button id="btn-new-collection" class="small-btn">+ New</button>
+              </div>
+              <div id="collections-list" class="collections-nav-list">
+                <!-- Dynamically populated collection items -->
+              </div>
+            </div>
+
+            <!-- Content Area: Selected Collection Details & Wallpapers -->
+            <div class="collection-detail-area">
+              <div class="collection-header-row">
+                <div class="collection-title-edit">
+                  <h4 id="active-col-name">Masterpieces</h4>
+                  <p id="active-col-desc">Personal showcase of top-tier anime art</p>
+                </div>
+                <div class="collection-actions">
+                  <button id="btn-rename-col" class="secondary-btn" title="Edit Collection">✏️ Rename</button>
+                  <button id="btn-delete-col" class="danger-btn" title="Delete Collection">🗑️ Delete</button>
+                </div>
+              </div>
+
+              <!-- Collection Search & Filter -->
+              <div class="library-toolbar">
+                <div class="library-search-box">
+                  <input type="text" id="col-search-input" placeholder="Search within collection..." />
+                </div>
+                <div class="library-filters">
+                  <select id="col-filter-franchise" class="lib-select">
+                    <option value="all">All Franchises</option>
+                  </select>
+                  <select id="col-filter-res" class="lib-select">
+                    <option value="all">All Resolutions</option>
+                    <option value="3840x2160">4K</option>
+                    <option value="2560x1440">1440p</option>
+                    <option value="1920x1080">1080p</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="collection-items-grid" class="wallpaper-card-grid">
+                <!-- Items in selected collection -->
+              </div>
+              <div id="collection-items-empty" class="library-empty-state hidden">
+                <div class="empty-icon">🗂️</div>
+                <h4>Empty Collection</h4>
+                <p>Add wallpapers to this collection from your Favorites or active screensaver.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: BLACKLIST -->
+        <div id="tab-content-blacklist" class="library-tab-panel">
+          <div class="blacklist-intro">
+            <p>Blacklisted artwork is permanently excluded from the prefetch queue and will never appear on your screensaver. You can restore artwork at any time.</p>
+          </div>
+          <div id="blacklist-grid" class="wallpaper-card-grid">
+            <!-- Dynamically populated blacklist items -->
+          </div>
+          <div id="blacklist-empty" class="library-empty-state hidden">
+            <div class="empty-icon">🛡️</div>
+            <h4>No Blacklisted Artwork</h4>
+            <p>Exclude unwanted artwork instantly using the 🚫 button on the bottom control bar or pressing <kbd>X</kbd>.</p>
+          </div>
+        </div>
+
+        <!-- TAB 4: STATS & STORAGE -->
+        <div id="tab-content-stats" class="library-tab-panel">
+          <div class="stats-overview-grid">
+            <div class="stat-card">
+              <span class="stat-card-title">Unique Wallpapers Displayed</span>
+              <span class="stat-card-val" id="stat-lib-displayed">0</span>
+              <span class="stat-card-sub">Guaranteed zero duplicate displays</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-title">Franchises Explored</span>
+              <span class="stat-card-val" id="stat-lib-franchises">0</span>
+              <span class="stat-card-sub">From 18 curated anime franchises</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-title">Total Favorites</span>
+              <span class="stat-card-val" id="stat-lib-favorites">0</span>
+              <span class="stat-card-sub">Saved high-resolution artworks</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-title">Permanently Excluded</span>
+              <span class="stat-card-val" id="stat-lib-blacklisted">0</span>
+              <span class="stat-card-sub">Removed from queue</span>
+            </div>
+          </div>
+
+          <div class="storage-manager-card">
+            <h4>💾 Downloaded Image Storage & Cache</h4>
+            <div class="storage-bar-wrapper">
+              <div class="storage-bar-labels">
+                <span>Disk Cache Utilization</span>
+                <span id="storage-cache-percent">0%</span>
+              </div>
+              <div class="storage-meter">
+                <div id="storage-cache-progress" class="storage-meter-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div class="storage-details-grid">
+              <div class="storage-detail-col">
+                <span class="storage-detail-label">Favorites Storage:</span>
+                <strong id="storage-favorites-size">0 MB</strong>
+                <span class="storage-detail-sub" id="storage-favorites-files">(0 files)</span>
+              </div>
+              <div class="storage-detail-col">
+                <span class="storage-detail-label">Prefetch Cache:</span>
+                <strong id="storage-cache-size">0 MB</strong>
+                <span class="storage-detail-sub" id="storage-cache-files">(0 / 200 files)</span>
+              </div>
+              <div class="storage-detail-col">
+                <span class="storage-detail-label">Total Downloaded:</span>
+                <strong id="storage-total-size">0 MB</strong>
+                <span class="storage-detail-sub" id="storage-total-gb">(0.00 GB)</span>
+              </div>
+            </div>
+
+            <div class="storage-actions-row">
+              <button id="btn-purge-cache" class="secondary-btn" title="Free up disk space by clearing cached prefetch images">🧹 Purge Cache Only</button>
+              <button id="btn-refresh-storage" class="small-btn">🔄 Refresh Stats</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Prompt Dialog (Create / Rename) -->
+  <div id="collection-prompt-modal" class="modal-backdrop hidden">
+    <div class="modal-card prompt-card">
+      <div class="modal-header">
+        <h3 id="prompt-modal-title">New Collection</h3>
+        <button id="btn-prompt-close" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label id="prompt-input-label">Collection Name</label>
+          <input type="text" id="prompt-input-name" placeholder="e.g. Dark Fantasy, Sukuna Shrine" />
+        </div>
+        <div class="setting-group" id="prompt-desc-group">
+          <label>Description (Optional)</label>
+          <input type="text" id="prompt-input-desc" placeholder="Brief note about this collection" />
+        </div>
+        <div class="prompt-actions">
+          <button id="btn-prompt-confirm" class="small-btn">Save</button>
+          <button id="btn-prompt-cancel" class="secondary-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Wallpaper to Collection Picker Modal -->
+  <div id="add-to-collection-modal" class="modal-backdrop hidden">
+    <div class="modal-card prompt-card">
+      <div class="modal-header">
+        <h3>🗂️ Add to Collection</h3>
+        <button id="btn-add-col-close" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: #8F9BA8; margin-bottom: 0.8rem;">Select a collection for <strong id="add-col-wpid" style="color: #6EE7B7;"></strong>:</p>
+        <div id="add-col-picker-list" class="collection-picker-list">
+          <!-- Dynamically populated collection buttons -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       INTERACTIVE ARTWORK INFORMATION PANEL (Key: I)
+       ========================================================================== -->
+  <div id="modal-artwork-info" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="artinfo-title">
+    <div class="modal-card artinfo-card">
+      <div class="artinfo-header">
+        <div class="artinfo-header-left">
+          <span class="artinfo-pill">Artwork Intelligence</span>
+          <h2 id="artinfo-title" class="artinfo-title">Popular Anime</h2>
+          <span id="artinfo-character-subtitle" class="artinfo-character-subtitle"></span>
+        </div>
+        <button id="btn-artinfo-close" class="modal-close-btn" title="Close Details (Esc or I)">✕</button>
+      </div>
+
+      <div class="artinfo-body">
+        <!-- Visual Column: Thumbnail & Quick Actions -->
+        <div class="artinfo-visual-col">
+          <div class="artinfo-preview-box">
+            <img id="artinfo-preview-img" src="" alt="Artwork Preview" class="artinfo-preview-img" />
+            <div class="artinfo-preview-gradient"></div>
+            <div class="artinfo-preview-badges">
+              <span id="artinfo-seq-badge" class="artinfo-badge-seq">#1 in Session</span>
+              <span id="artinfo-quality-badge" class="artinfo-badge-quality">★ 85.0 Quality</span>
+            </div>
+          </div>
+          
+          <div class="artinfo-actions-grid">
+            <button id="btn-artinfo-open-source" class="artinfo-action-btn primary" title="Open original source in new tab (Key: O)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+              <span>Open Source</span>
+              <kbd class="action-kbd">O</kbd>
+            </button>
+            <button id="btn-artinfo-copy-url" class="artinfo-action-btn" title="Copy high-res image URL (Key: C)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span id="text-artinfo-copy">Copy URL</span>
+              <kbd class="action-kbd">C</kbd>
+            </button>
+            <button id="btn-artinfo-favorite" class="artinfo-action-btn" title="Toggle Favorite (Key: L)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span id="text-artinfo-fav">Favorite</span>
+              <kbd class="action-kbd">L</kbd>
+            </button>
+            <button id="btn-artinfo-view-orig" class="artinfo-action-btn" title="View Full 1:1 Resolution (Key: V)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              <span>View 1:1</span>
+              <kbd class="action-kbd">V</kbd>
+            </button>
+            <button id="btn-artinfo-hide" class="artinfo-action-btn danger-soft" title="Hide and advance to next artwork (Key: H)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <span>Hide Art</span>
+              <kbd class="action-kbd">H</kbd>
+            </button>
+            <button id="btn-artinfo-blacklist" class="artinfo-action-btn danger" title="Permanently Blacklist Artwork (Key: B)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+              <span>Blacklist</span>
+              <kbd class="action-kbd">B</kbd>
+            </button>
+            <button id="btn-artinfo-report" class="artinfo-action-btn danger-soft" title="Report Unsafe Artwork and Block (Key: R)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+              <span>Report Art</span>
+              <kbd class="action-kbd">R</kbd>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metadata Spec Sheet Column -->
+        <div class="artinfo-specs-col">
+          <div class="artinfo-specs-grid">
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Safety &amp; Moderation</span>
+              <span id="artinfo-val-safety" class="artinfo-spec-val safety-badge safe">SAFE (Verified SFW)</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Anime Franchise</span>
+              <span id="artinfo-val-franchise" class="artinfo-spec-val highlight">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Character Name(s)</span>
+              <span id="artinfo-val-character" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Wallpaper ID</span>
+              <span id="artinfo-val-id" class="artinfo-spec-val mono">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Source Provider</span>
+              <span id="artinfo-val-provider" class="artinfo-spec-val provider-pill">Wallhaven</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Query Strategy</span>
+              <span id="artinfo-val-strategy" class="artinfo-spec-val strategy-pill">verified_tag_id</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Original Resolution</span>
+              <span id="artinfo-val-resolution" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Aspect Ratio</span>
+              <span id="artinfo-val-ratio" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">File Size</span>
+              <span id="artinfo-val-filesize" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Favorites Count</span>
+              <span id="artinfo-val-favorites" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Views Count</span>
+              <span id="artinfo-val-views" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Upload Date</span>
+              <span id="artinfo-val-uploaddate" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Uploader</span>
+              <span id="artinfo-val-uploader" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item full-width">
+              <span class="artinfo-spec-label">Original Source Link</span>
+              <div class="artinfo-source-link-wrapper">
+                <a id="artinfo-val-source" class="artinfo-source-link" href="#" target="_blank" rel="noopener noreferrer">--</a>
+              </div>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Display Sequence</span>
+              <span id="artinfo-val-sequence" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item">
+              <span class="artinfo-spec-label">Technical Quality Score</span>
+              <span id="artinfo-val-quality" class="artinfo-spec-val score-highlight">--</span>
+            </div>
+          </div>
+          
+          <div class="artinfo-footer-hint">
+            <span class="artinfo-playback-status">▶ Slideshow playback continues uninterrupted</span>
+            <span class="artinfo-hint-keys">Press <kbd>I</kbd> or <kbd>Esc</kbd> to dismiss</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       WALLPAPER COMPOSITION & FOCAL POINT ADJUSTMENT MODAL (Key: O)
+       ========================================================================== -->
+  <div id="modal-composition" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="comp-modal-title">
+    <div class="modal-card comp-card">
+      <div class="artinfo-header">
+        <div class="artinfo-header-left">
+          <span class="artinfo-pill">Composition & Framing</span>
+          <h2 id="comp-modal-title" class="artinfo-title">Focal Point & Multi-Monitor Crop</h2>
+        </div>
+        <button id="btn-comp-close" class="modal-close-btn" title="Close Composition Editor (Esc or O)">✕</button>
+      </div>
+
+      <div class="comp-modal-body">
+        <!-- Interactive Focal Canvas / Framing Preview -->
+        <div class="comp-preview-section">
+          <div class="comp-aspect-switcher">
+            <span class="comp-label-sub">Preview Monitor Geometry:</span>
+            <div class="comp-segmented">
+              <button class="comp-aspect-btn active" data-aspect="landscape">16:9 Landscape</button>
+              <button class="comp-aspect-btn" data-aspect="ultrawide">21:9 Ultrawide</button>
+              <button class="comp-aspect-btn" data-aspect="portrait">9:16 Portrait</button>
+            </div>
+          </div>
+
+          <div id="comp-canvas-wrapper" class="comp-canvas-wrapper aspect-landscape">
+            <img id="comp-canvas-img" src="" alt="Focal Point Target" class="comp-canvas-img" />
+            <div id="comp-focal-reticle" class="comp-focal-reticle" style="left: 50%; top: 50%;">
+              <div class="reticle-ring"></div>
+              <div class="reticle-crosshair-h"></div>
+              <div class="reticle-crosshair-v"></div>
+              <span id="reticle-coord-badge" class="reticle-coord-badge">50%, 50%</span>
+            </div>
+          </div>
+          <span class="comp-drag-hint">Click or drag crosshairs anywhere on artwork to lock focal center</span>
+        </div>
+
+        <!-- Controls Column -->
+        <div class="comp-controls-section">
+          <!-- Display Mode (Fit / Fill / Original) -->
+          <div class="comp-control-group">
+            <label class="comp-group-label">Display Mode</label>
+            <div class="comp-segmented full-width" id="comp-mode-segmented">
+              <button class="comp-mode-btn active" data-mode="fill" title="Scale to fill screen (uses focal point to prevent cropping)">Fill (Cover)</button>
+              <button class="comp-mode-btn" data-mode="fit" title="Fit entire image on screen without cropping">Fit (Contain)</button>
+              <button class="comp-mode-btn" data-mode="original" title="Display at exact native 1:1 pixel resolution">Original (1:1)</button>
+            </div>
+          </div>
+
+          <!-- Blurred Background Fill Toggle -->
+          <div class="comp-control-group checkbox-row">
+            <label class="comp-checkbox-label">
+              <input type="checkbox" id="comp-check-blurred-backdrop" checked />
+              <span>Blurred Background Fill for aspect ratio mismatch</span>
+            </label>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="comp-control-group">
+            <label class="comp-group-label">Quick Framing Presets</label>
+            <div class="comp-preset-grid">
+              <button class="comp-preset-btn" data-x="50" data-y="50">Center (50%, 50%)</button>
+              <button class="comp-preset-btn" data-x="50" data-y="25">Upper Face (50%, 25%)</button>
+              <button class="comp-preset-btn" data-x="28" data-y="32">Left Character (28%, 32%)</button>
+              <button class="comp-preset-btn" data-x="72" data-y="32">Right Character (72%, 32%)</button>
+              <button class="comp-preset-btn" data-x="33" data-y="33">Rule of Thirds (33%, 33%)</button>
+              <button class="comp-preset-btn" data-x="50" data-y="70">Lower Anchor (50%, 70%)</button>
+            </div>
+          </div>
+
+          <!-- Multi-Character Support -->
+          <div class="comp-control-group">
+            <div class="comp-label-row">
+              <label class="comp-group-label">Multi-Character Framing</label>
+              <button id="btn-comp-add-char" class="comp-mini-btn">+ Add Character Pin</button>
+            </div>
+            <div id="comp-character-pins-list" class="comp-character-pins-list">
+              <!-- Dynamically rendered character targets -->
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="comp-actions-row">
+            <button id="btn-comp-save" class="small-btn primary">Save for this Artwork</button>
+            <button id="btn-comp-reset" class="secondary-btn">Reset to Center</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       BACKUP RESTORATION CONFIRMATION MODAL
+       ========================================================================== -->
+  <div id="backup-restore-modal" class="backup-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="backup-modal-box">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+        <span style="font-size: 1.4rem;">⚠️</span>
+        <h3 style="font-size: 1.1rem; color: #F1F5F9; font-weight: 700;">Confirm Database Restoration</h3>
+      </div>
+      <p style="font-size: 0.82rem; color: #94A3B8; line-height: 1.5; margin-bottom: 0.8rem;">
+        Restoring from <strong id="restore-target-name" style="color: #38BDF8; font-family: var(--font-mono);">--</strong> will replace your active database history, settings, and taste model.
+      </p>
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; font-size: 0.75rem; color: #6EE7B7; display: flex; align-items: center; gap: 0.4rem;">
+        <span>🛡️</span>
+        <span>A pre-restore safety snapshot will be created automatically before applying this restore.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.2rem;">
+        <label class="checkbox-label" style="font-size: 0.8rem;">
+          <input type="checkbox" id="chk-restore-favs" checked>
+          <span>Restore Saved Favorites Images (favorites/)</span>
+        </label>
+        <label class="checkbox-label" style="font-size: 0.8rem;">
+          <input type="checkbox" id="chk-restore-cache">
+          <span>Restore Downloaded Wallpaper Cache (.cache/)</span>
+        </label>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+        <button id="btn-restore-cancel" class="secondary-btn" style="padding: 0.45rem 1rem; font-size: 0.8rem;">Cancel</button>
+        <button id="btn-restore-confirm" class="text-danger-btn" style="padding: 0.45rem 1rem; font-size: 0.8rem; border: 1px solid rgba(239, 68, 68, 0.5); font-weight: 700;">Confirm &amp; Restore</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       COMPACT PERFORMANCE DIAGNOSTICS & ADAPTIVE RENDERING PANEL
+       ========================================================================== -->
+  <aside id="perf-diagnostics-overlay" class="perf-diagnostics-overlay hidden" role="region" aria-label="Performance Diagnostics Panel">
+    <div class="perf-diag-container glass-panel">
+      <!-- Header -->
+      <div class="perf-diag-header">
+        <div class="perf-diag-title-group">
+          <span class="perf-diag-icon">⚡</span>
+          <span class="perf-diag-title">System Diagnostics</span>
+          <span id="perf-profile-pill" class="perf-status-badge profile-high" title="Current Adaptive Quality Profile">HIGH</span>
+        </div>
+        <div class="perf-diag-header-actions">
+          <button id="btn-perf-reset-metrics" class="icon-btn-tiny" title="Reset Rolling Metrics Counters">🔄</button>
+          <button id="btn-perf-close" class="icon-btn-tiny" title="Close Diagnostics (D / Esc)">✕</button>
+        </div>
+      </div>
+
+      <!-- Adaptive Profile Selector -->
+      <div class="perf-profile-bar">
+        <span class="perf-bar-label">Profile:</span>
+        <div class="perf-pill-selector" id="perf-profile-selector">
+          <button class="perf-pill-btn active" data-profile="auto" title="Automatically adjust visual quality based on live frame rate and memory">Auto</button>
+          <button class="perf-pill-btn" data-profile="high" title="Full effects, dynamic accent, ken-burns transforms, 28px blur backdrop">High</button>
+          <button class="perf-pill-btn" data-profile="balanced" title="Reduced transforms, 12px blur backdrop, moderate particles">Balanced</button>
+          <button class="perf-pill-btn" data-profile="low" title="Disabled blur, minimal particles, fixed accent, smooth transitions">Low Res</button>
+        </div>
+      </div>
+
+      <!-- Metrics Grid -->
+      <div class="perf-metrics-grid">
+        <!-- Metric 1: FPS -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Frame Rate</span>
+            <span class="perf-card-status-dot dot-green" id="perf-fps-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-fps">60</span>
+            <span class="perf-card-unit">FPS</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-fps">Target: 60 fps</div>
+        </div>
+
+        <!-- Metric 2: Memory -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Browser Heap</span>
+            <span class="perf-card-status-dot dot-green" id="perf-mem-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-mem">--</span>
+            <span class="perf-card-unit" id="perf-unit-mem">MB</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-mem">JS Heap Used</div>
+        </div>
+
+        <!-- Metric 3: Image Load & Decode Time -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Image Load/Decode</span>
+            <span class="perf-card-status-dot dot-green" id="perf-img-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-img-time">--</span>
+            <span class="perf-card-unit">ms</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-img-time">Load: -- ms · Dec: -- ms</div>
+        </div>
+
+        <!-- Metric 4: Prefetch Queue Depth -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Prefetch Queue</span>
+            <span class="perf-card-status-dot dot-green" id="perf-queue-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-queue">--</span>
+            <span class="perf-card-unit">unseen</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-queue">Cached: -- / Max: --</div>
+        </div>
+
+        <!-- Metric 5: Image Cache Hit Rate -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Cache Hit Rate</span>
+            <span class="perf-card-status-dot dot-green" id="perf-cache-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-cache-rate">100</span>
+            <span class="perf-card-unit">%</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-cache">Hits: -- / Lookups: --</div>
+        </div>
+
+        <!-- Metric 6: Backend Response Time -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Backend Response</span>
+            <span class="perf-card-status-dot dot-green" id="perf-resp-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-resp-time">--</span>
+            <span class="perf-card-unit">ms</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-resp">Avg: -- ms · P95: -- ms</div>
+        </div>
+
+        <!-- Metric 7: SQLite Latency -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">SQLite Latency</span>
+            <span class="perf-card-status-dot dot-green" id="perf-sql-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-sql-time">--</span>
+            <span class="perf-card-unit">ms</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-sql">Slow queries: 0</div>
+        </div>
+
+        <!-- Metric 8: API Failure Rate -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">API Failure Rate</span>
+            <span class="perf-card-status-dot dot-green" id="perf-api-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-fail-rate">0.0</span>
+            <span class="perf-card-unit">%</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-fail">0 errors / 0 reqs</div>
+        </div>
+
+        <!-- Metric 9: Active Workers -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Active Workers</span>
+            <span class="perf-card-status-dot dot-green" id="perf-worker-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-workers">--</span>
+            <span class="perf-card-unit">threads</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-workers">Prefetch: active</div>
+        </div>
+
+        <!-- Metric 10: Failover & Provider Status -->
+        <div class="perf-card">
+          <div class="perf-card-header">
+            <span class="perf-card-label">Artwork Provider</span>
+            <span class="perf-card-status-dot dot-green" id="perf-provider-dot"></span>
+          </div>
+          <div class="perf-card-value-row">
+            <span class="perf-card-val" id="perf-val-provider" style="font-size: 1.05rem;">Wallhaven</span>
+          </div>
+          <div class="perf-card-sub" id="perf-sub-provider">Failovers: 0 · All healthy</div>
+        </div>
+      </div>
+
+      <!-- Footer Help & Shortcut -->
+      <div class="perf-diag-footer">
+        <span class="perf-footer-note">Press <kbd class="kbd-badge">D</kbd> to toggle · Monitoring pauses in background</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

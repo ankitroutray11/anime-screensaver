@@ -1,0 +1,13 @@
+.browser_profile/
+.cache/
+backups/
+__pycache__/
+*.pyc
+*.pid
+*.port
+*.log
+*.db
+*.db*
+*.backup
+launcher_config.json.backup
+test_wt.*

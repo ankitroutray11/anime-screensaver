@@ -1,0 +1,1560 @@
+{
+  "jujutsu-kaisen": {
+    "slug": "jujutsu-kaisen",
+    "name": "Jujutsu Kaisen",
+    "english_aliases": [
+      "Jujutsu Kaisen",
+      "Sorcery Fight",
+      "JJK"
+    ],
+    "japanese_aliases": [
+      "呪術廻戦",
+      "Jujutsu Kaisen"
+    ],
+    "search_queries": [
+      "\"Jujutsu Kaisen\"",
+      "Jujutsu Kaisen"
+    ],
+    "wallhaven_tag_ids": [
+      108966
+    ],
+    "character_tag_ids": {
+      "Satoru Gojo": [
+        109009
+      ]
+    },
+    "allowlist_tags": [
+      "aoi todo",
+      "choso",
+      "choso (jujutsu kaisen)",
+      "fushiguro megumi",
+      "fushiguro toji",
+      "geto suguru",
+      "gojo satoru",
+      "itadori yuji",
+      "jjk",
+      "jujutsu kaisen",
+      "kento nanami",
+      "kugisaki nobara",
+      "mahito",
+      "maki zenin",
+      "megumi fushiguro",
+      "nanami kento",
+      "nobara kugisaki",
+      "okkotsu yuta",
+      "ryomen sukuna",
+      "satoru gojo",
+      "sorcery fight",
+      "suguru geto",
+      "sukuna",
+      "toge inumaki",
+      "toji fushiguro",
+      "yuji itadori",
+      "yuta okkotsu"
+    ],
+    "characters": {
+      "Satoru Gojo": [
+        "gojo satoru",
+        "satoru gojo",
+        "gojo"
+      ],
+      "Ryomen Sukuna": [
+        "ryomen sukuna",
+        "sukuna"
+      ],
+      "Yuji Itadori": [
+        "yuji itadori",
+        "itadori yuji",
+        "itadori"
+      ],
+      "Megumi Fushiguro": [
+        "megumi fushiguro",
+        "fushiguro megumi"
+      ],
+      "Yuta Okkotsu": [
+        "yuta okkotsu",
+        "okkotsu yuta"
+      ],
+      "Toji Fushiguro": [
+        "toji fushiguro",
+        "fushiguro toji"
+      ],
+      "Kento Nanami": [
+        "kento nanami",
+        "nanami kento"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay",
+      "-vtuber"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "jujitsu martial art",
+      "bjj"
+    ]
+  },
+  "demon-slayer": {
+    "slug": "demon-slayer",
+    "name": "Demon Slayer",
+    "english_aliases": [
+      "Demon Slayer",
+      "Demon Slayer: Kimetsu no Yaiba",
+      "Blade of Demon Destruction"
+    ],
+    "japanese_aliases": [
+      "鬼滅の刃",
+      "Kimetsu no Yaiba"
+    ],
+    "search_queries": [
+      "\"Kimetsu no Yaiba\"",
+      "\"Demon Slayer\""
+    ],
+    "wallhaven_tag_ids": [
+      84088
+    ],
+    "character_tag_ids": {
+      "Kyojuro Rengoku": [
+        89202
+      ],
+      "Akaza": [
+        145609
+      ]
+    },
+    "allowlist_tags": [
+      "agatsuma zenitsu",
+      "akaza",
+      "daki",
+      "demon slayer",
+      "demon slayer: kimetsu no yaiba",
+      "giyu tomioka",
+      "gyomei himejima",
+      "hashibira inosuke",
+      "inosuke hashibira",
+      "kamado nezuko",
+      "kamado tanjiro",
+      "kanroji mitsuri",
+      "kibutsuji muzan",
+      "kimetsu no yaiba",
+      "kocho shinobu",
+      "kokushibo",
+      "kyojuro rengoku",
+      "mitsuri kanroji",
+      "muichiro tokito",
+      "muzan kibutsuji",
+      "nezuko kamado",
+      "obanai iguro",
+      "rengoku kyojuro",
+      "sanemi shinazugawa",
+      "shinobu kocho",
+      "tanjiro kamado",
+      "tengen uzui",
+      "tokito muichiro",
+      "tomioka giyu",
+      "uzui tengen",
+      "zenitsu agatsuma"
+    ],
+    "characters": {
+      "Tanjiro Kamado": [
+        "tanjiro kamado",
+        "kamado tanjiro",
+        "tanjiro"
+      ],
+      "Nezuko Kamado": [
+        "nezuko kamado",
+        "kamado nezuko",
+        "nezuko"
+      ],
+      "Giyu Tomioka": [
+        "giyu tomioka",
+        "tomioka giyu"
+      ],
+      "Kyojuro Rengoku": [
+        "kyojuro rengoku",
+        "rengoku kyojuro",
+        "rengoku"
+      ],
+      "Shinobu Kocho": [
+        "shinobu kocho",
+        "kocho shinobu"
+      ],
+      "Zenitsu Agatsuma": [
+        "zenitsu agatsuma",
+        "agatsuma zenitsu",
+        "zenitsu"
+      ],
+      "Kokushibo": [
+        "kokushibo"
+      ],
+      "Akaza": [
+        "akaza"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "slayer band",
+      "demon rock band"
+    ]
+  },
+  "attack-on-titan": {
+    "slug": "attack-on-titan",
+    "name": "Attack on Titan",
+    "english_aliases": [
+      "Attack on Titan",
+      "AOT",
+      "SNK"
+    ],
+    "japanese_aliases": [
+      "進撃の巨人",
+      "Shingeki no Kyojin"
+    ],
+    "search_queries": [
+      "\"Shingeki no Kyojin\"",
+      "\"Attack on Titan\""
+    ],
+    "wallhaven_tag_ids": [
+      140
+    ],
+    "character_tag_ids": {
+      "Levi Ackerman": [
+        4386
+      ],
+      "Zeke Yeager": [
+        139326
+      ]
+    },
+    "allowlist_tags": [
+      "ackerman levi",
+      "ackerman mikasa",
+      "annie leonhart",
+      "aot",
+      "arlert armin",
+      "armin arlert",
+      "armored titan",
+      "attack on titan",
+      "attack titan",
+      "beast titan",
+      "bertholdt hoover",
+      "braun reiner",
+      "colossal titan",
+      "eren jaeger",
+      "eren yeager",
+      "erwin smith",
+      "founding titan",
+      "hange zoe",
+      "historia reiss",
+      "levi ackerman",
+      "mikasa ackerman",
+      "reiner braun",
+      "sasha blouse",
+      "shingeki no kyojin",
+      "smith erwin",
+      "snk",
+      "survey corps",
+      "yeager eren",
+      "zoe hange"
+    ],
+    "characters": {
+      "Levi Ackerman": [
+        "levi ackerman",
+        "ackerman levi",
+        "levi"
+      ],
+      "Eren Yeager": [
+        "eren yeager",
+        "eren jaeger",
+        "yeager eren",
+        "eren"
+      ],
+      "Mikasa Ackerman": [
+        "mikasa ackerman",
+        "ackerman mikasa",
+        "mikasa"
+      ],
+      "Erwin Smith": [
+        "erwin smith",
+        "smith erwin"
+      ],
+      "Armin Arlert": [
+        "armin arlert",
+        "arlert armin"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "titan missile",
+      "titan spacecraft",
+      "saturn moon titan"
+    ]
+  },
+  "solo-leveling": {
+    "slug": "solo-leveling",
+    "name": "Solo Leveling",
+    "english_aliases": [
+      "Solo Leveling",
+      "Only I Level Up"
+    ],
+    "japanese_aliases": [
+      "俺だけレベルアップな件",
+      "Na Honjaman Rebeleob"
+    ],
+    "search_queries": [
+      "\"Solo Leveling\"",
+      "\"Na Honjaman Rebeleob\""
+    ],
+    "wallhaven_tag_ids": [
+      91996
+    ],
+    "character_tag_ids": {
+      "Sung Jin-woo": [
+        91997
+      ]
+    },
+    "allowlist_tags": [
+      "beru",
+      "cha hae-in",
+      "go gun-hee",
+      "hae-in cha",
+      "i alone level up",
+      "igris",
+      "iron",
+      "jin-woo sung",
+      "na honjaman rebeleob",
+      "shadow monarch",
+      "solo leveling",
+      "sung jin woo",
+      "sung jin-woo",
+      "thomas andre",
+      "tusk",
+      "woo jin-chul"
+    ],
+    "characters": {
+      "Sung Jin-woo": [
+        "sung jin-woo",
+        "sung jin woo",
+        "jin-woo",
+        "shadow monarch"
+      ],
+      "Cha Hae-in": [
+        "cha hae-in",
+        "hae-in cha"
+      ],
+      "Igris": [
+        "igris",
+        "blood-red commander igris"
+      ],
+      "Beru": [
+        "beru"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "leveling guide",
+      "gym workout"
+    ]
+  },
+  "chainsaw-man": {
+    "slug": "chainsaw-man",
+    "name": "Chainsaw Man",
+    "english_aliases": [
+      "Chainsaw Man",
+      "CSM"
+    ],
+    "japanese_aliases": [
+      "チェンソーマン",
+      "Chainsaw Man"
+    ],
+    "search_queries": [
+      "\"Chainsaw Man\"",
+      "Chainsaw Man"
+    ],
+    "wallhaven_tag_ids": [
+      98223
+    ],
+    "character_tag_ids": {
+      "Reze": [
+        102138
+      ]
+    },
+    "allowlist_tags": [
+      "aki hayakawa",
+      "angel devil",
+      "beam",
+      "chainsaw man",
+      "control devil",
+      "csm",
+      "denji",
+      "hayakawa aki",
+      "higashiyama kobeni",
+      "himeno",
+      "kishibe",
+      "kobeni higashiyama",
+      "makima",
+      "pochita",
+      "power (chainsaw man)",
+      "quanxi",
+      "reze"
+    ],
+    "characters": {
+      "Denji": [
+        "denji",
+        "chainsaw man"
+      ],
+      "Makima": [
+        "makima",
+        "control devil"
+      ],
+      "Power": [
+        "power (chainsaw man)",
+        "blood fiend"
+      ],
+      "Aki Hayakawa": [
+        "aki hayakawa",
+        "hayakawa aki",
+        "aki"
+      ],
+      "Reze": [
+        "reze",
+        "bomb devil"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay",
+      "-tool",
+      "-lumberjack"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "chainsaw carving",
+      "texas chainsaw",
+      "lumberjack",
+      "power tool"
+    ]
+  },
+  "one-piece": {
+    "slug": "one-piece",
+    "name": "One Piece",
+    "english_aliases": [
+      "One Piece",
+      "Straw Hat Pirates"
+    ],
+    "japanese_aliases": [
+      "ワンピース",
+      "Wan Pīsu"
+    ],
+    "search_queries": [
+      "\"One Piece\"",
+      "One Piece anime"
+    ],
+    "wallhaven_tag_ids": [
+      1394
+    ],
+    "character_tag_ids": {
+      "Monkey D. Luffy": [
+        1550
+      ],
+      "Roronoa Zoro": [
+        1551
+      ]
+    },
+    "allowlist_tags": [
+      "ace",
+      "big mom",
+      "blackbeard",
+      "boa hancock",
+      "brook",
+      "charlotte katakuri",
+      "chopper",
+      "donquixote doflamingo",
+      "edward newgate",
+      "franky",
+      "gear 5",
+      "gol d. roger",
+      "jinbe",
+      "kaido",
+      "law",
+      "luffy",
+      "marshall d. teach",
+      "monkey d. luffy",
+      "nami (one piece)",
+      "nico robin",
+      "one piece",
+      "portgas d. ace",
+      "robin (one piece)",
+      "roronoa zoro",
+      "sabo",
+      "sanji",
+      "shanks",
+      "straw hat pirates",
+      "tony tony chopper",
+      "trafalgar law",
+      "usopp",
+      "vinsmoke sanji",
+      "whitebeard",
+      "yamato (one piece)",
+      "zoro"
+    ],
+    "characters": {
+      "Monkey D. Luffy": [
+        "monkey d. luffy",
+        "luffy",
+        "straw hat luffy",
+        "gear 5"
+      ],
+      "Roronoa Zoro": [
+        "roronoa zoro",
+        "zoro",
+        "pirate hunter"
+      ],
+      "Nami": [
+        "nami (one piece)",
+        "cat burglar"
+      ],
+      "Sanji": [
+        "vinsmoke sanji",
+        "sanji",
+        "black leg"
+      ],
+      "Nico Robin": [
+        "nico robin",
+        "robin (one piece)"
+      ],
+      "Trafalgar Law": [
+        "trafalgar law",
+        "trafalgar d. water law",
+        "law"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay",
+      "-swimsuit",
+      "-monokini",
+      "-bikini"
+    ],
+    "excluded_tag_ids": [
+      243
+    ],
+    "excluded_keywords": [
+      "swimsuit",
+      "monokini",
+      "bikini",
+      "swimwear",
+      "bathing suit",
+      "one-piece swimsuit"
+    ]
+  },
+  "bleach": {
+    "slug": "bleach",
+    "name": "Bleach",
+    "english_aliases": [
+      "Bleach",
+      "Bleach: Thousand-Year Blood War",
+      "TYBW"
+    ],
+    "japanese_aliases": [
+      "ブリーチ",
+      "Burīchi"
+    ],
+    "search_queries": [
+      "\"Bleach\"",
+      "Bleach anime"
+    ],
+    "wallhaven_tag_ids": [
+      1405
+    ],
+    "character_tag_ids": {
+      "Ichigo Kurosaki": [
+        1570
+      ]
+    },
+    "allowlist_tags": [
+      "abarai renji",
+      "aizen sosuke",
+      "bleach",
+      "bleach: thousand-year blood war",
+      "byakuya kuchiki",
+      "gotei 13",
+      "grimmjow jaegerjaquez",
+      "hitsugaya toshiro",
+      "hollow",
+      "ichigo kurosaki",
+      "kenpachi zaraki",
+      "kisuke urahara",
+      "kuchiki byakuya",
+      "kuchiki rukia",
+      "kurosaki ichigo",
+      "renji abarai",
+      "rukia kuchiki",
+      "shinigami",
+      "shunsui kyoraku",
+      "sosuke aizen",
+      "soul reaper",
+      "toshiro hitsugaya",
+      "tybw",
+      "ulquiorra cifer",
+      "urahara kisuke",
+      "zaraki kenpachi"
+    ],
+    "characters": {
+      "Ichigo Kurosaki": [
+        "ichigo kurosaki",
+        "kurosaki ichigo",
+        "ichigo"
+      ],
+      "Rukia Kuchiki": [
+        "rukia kuchiki",
+        "kuchiki rukia",
+        "rukia"
+      ],
+      "Sosuke Aizen": [
+        "sosuke aizen",
+        "aizen sosuke",
+        "aizen"
+      ],
+      "Byakuya Kuchiki": [
+        "byakuya kuchiki",
+        "kuchiki byakuya",
+        "byakuya"
+      ],
+      "Kenpachi Zaraki": [
+        "kenpachi zaraki",
+        "zaraki kenpachi",
+        "kenpachi"
+      ],
+      "Toshiro Hitsugaya": [
+        "toshiro hitsugaya",
+        "hitsugaya toshiro",
+        "hitsugaya"
+      ],
+      "Kisuke Urahara": [
+        "kisuke urahara",
+        "urahara kisuke",
+        "urahara"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay",
+      "-cleaning",
+      "-detergent",
+      "-laundry",
+      "-wash"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "cleaning",
+      "detergent",
+      "laundry",
+      "wash",
+      "soap",
+      "chlorine",
+      "chemical bleach"
+    ]
+  },
+  "cyberpunk-edgerunners": {
+    "slug": "cyberpunk-edgerunners",
+    "name": "Cyberpunk: Edgerunners",
+    "english_aliases": [
+      "Cyberpunk: Edgerunners",
+      "Edgerunners"
+    ],
+    "japanese_aliases": [
+      "サイバーパンク エッジランナーズ",
+      "Saibāpanku Ejjirannāzu"
+    ],
+    "search_queries": [
+      "\"Cyberpunk: Edgerunners\"",
+      "\"Cyberpunk Edgerunners\""
+    ],
+    "wallhaven_tag_ids": [
+      167190
+    ],
+    "character_tag_ids": {
+      "Lucyna Kushinada": [
+        136622
+      ]
+    },
+    "allowlist_tags": [
+      "adam smasher",
+      "cyberpunk edgerunners",
+      "cyberpunk: edgerunners",
+      "david martinez",
+      "dorio (cyberpunk)",
+      "edgerunners",
+      "falco (cyberpunk)",
+      "kiwi (cyberpunk)",
+      "lucy (cyberpunk)",
+      "lucyna kushinada",
+      "maine (cyberpunk)",
+      "night city",
+      "rebecca (cyberpunk)"
+    ],
+    "characters": {
+      "David Martinez": [
+        "david martinez",
+        "david (cyberpunk)"
+      ],
+      "Lucy": [
+        "lucy (cyberpunk)",
+        "lucyna kushinada",
+        "lucy"
+      ],
+      "Rebecca": [
+        "rebecca (cyberpunk)",
+        "rebecca"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "cyberpunk 2077 game",
+      "generic cyberpunk"
+    ]
+  },
+  "neon-genesis-evangelion": {
+    "slug": "neon-genesis-evangelion",
+    "name": "Neon Genesis Evangelion",
+    "english_aliases": [
+      "Neon Genesis Evangelion",
+      "Evangelion",
+      "NGE",
+      "Eva"
+    ],
+    "japanese_aliases": [
+      "新世紀エヴァンゲリオン",
+      "Shin Seiki Evangerion"
+    ],
+    "search_queries": [
+      "\"Neon Genesis Evangelion\"",
+      "\"Evangelion\""
+    ],
+    "wallhaven_tag_ids": [
+      781
+    ],
+    "character_tag_ids": {
+      "Rei Ayanami": [
+        2342
+      ],
+      "Asuka Langley Soryu": [
+        749
+      ],
+      "Kaworu Nagisa": [
+        3120
+      ]
+    },
+    "allowlist_tags": [
+      "angels (evangelion)",
+      "asuka",
+      "asuka langley shikinami",
+      "asuka langley soryu",
+      "ayanami rei",
+      "eva unit 01",
+      "eva unit 02",
+      "eva-01",
+      "evangelion",
+      "gendo ikari",
+      "ikari shinji",
+      "katsuragi misato",
+      "kaworu nagisa",
+      "mari illustrious makinami",
+      "misato katsuragi",
+      "nagisa kaworu",
+      "neon genesis evangelion",
+      "nerv",
+      "nge",
+      "rei ayanami",
+      "ritsuko akagi",
+      "shin seiki evangelion",
+      "shinji ikari"
+    ],
+    "characters": {
+      "Shinji Ikari": [
+        "shinji ikari",
+        "ikari shinji",
+        "shinji"
+      ],
+      "Rei Ayanami": [
+        "rei ayanami",
+        "ayanami rei",
+        "rei"
+      ],
+      "Asuka Langley": [
+        "asuka langley soryu",
+        "asuka langley shikinami",
+        "asuka"
+      ],
+      "Misato Katsuragi": [
+        "misato katsuragi",
+        "katsuragi misato",
+        "misato"
+      ],
+      "Kaworu Nagisa": [
+        "kaworu nagisa",
+        "nagisa kaworu",
+        "kaworu"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "evangelical",
+      "christian evangelism",
+      "church gospel"
+    ]
+  },
+  "naruto": {
+    "slug": "naruto",
+    "name": "Naruto",
+    "english_aliases": [
+      "Naruto",
+      "Naruto Shippuden",
+      "Boruto"
+    ],
+    "japanese_aliases": [
+      "ナルト",
+      "Naruto"
+    ],
+    "search_queries": [
+      "\"Naruto Shippuden\"",
+      "\"Naruto\""
+    ],
+    "wallhaven_tag_ids": [
+      541
+    ],
+    "character_tag_ids": {
+      "Naruto Uzumaki": [
+        1188
+      ],
+      "Sasuke Uchiha": [
+        1568
+      ],
+      "Sakura Haruno": [
+        4312
+      ]
+    },
+    "allowlist_tags": [
+      "akatsuki",
+      "gaara",
+      "haruno sakura",
+      "hatake kakashi",
+      "hinata hyuga",
+      "hyuga hinata",
+      "itachi uchiha",
+      "jiraiya",
+      "kakashi hatake",
+      "madara uchiha",
+      "minato namikaze",
+      "namikaze minato",
+      "naruto",
+      "naruto shippuden",
+      "naruto uzumaki",
+      "obito uchiha",
+      "orochimaru",
+      "pain (naruto)",
+      "sakura haruno",
+      "sasuke uchiha",
+      "shikamaru nara",
+      "tsunade",
+      "uchiha itachi",
+      "uchiha madara",
+      "uchiha sasuke",
+      "uzumaki naruto"
+    ],
+    "characters": {
+      "Naruto Uzumaki": [
+        "naruto uzumaki",
+        "uzumaki naruto",
+        "naruto"
+      ],
+      "Sasuke Uchiha": [
+        "sasuke uchiha",
+        "uchiha sasuke",
+        "sasuke"
+      ],
+      "Kakashi Hatake": [
+        "kakashi hatake",
+        "hatake kakashi",
+        "kakashi"
+      ],
+      "Itachi Uchiha": [
+        "itachi uchiha",
+        "uchiha itachi",
+        "itachi"
+      ],
+      "Madara Uchiha": [
+        "madara uchiha",
+        "uchiha madara",
+        "madara"
+      ],
+      "Minato Namikaze": [
+        "minato namikaze",
+        "namikaze minato",
+        "minato"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "naruto whirlpool",
+      "fish cake",
+      "kamaboko"
+    ]
+  },
+  "dragon-ball": {
+    "slug": "dragon-ball",
+    "name": "Dragon Ball",
+    "english_aliases": [
+      "Dragon Ball",
+      "Dragon Ball Z",
+      "Dragon Ball Super",
+      "DBZ",
+      "DBS"
+    ],
+    "japanese_aliases": [
+      "ドラゴンボール",
+      "Doragon Bōru"
+    ],
+    "search_queries": [
+      "\"Dragon Ball Z\"",
+      "\"Dragon Ball Super\"",
+      "\"Dragon Ball\""
+    ],
+    "wallhaven_tag_ids": [
+      1898
+    ],
+    "character_tag_ids": {
+      "Son Goku": [
+        17286
+      ]
+    },
+    "allowlist_tags": [
+      "beerus",
+      "broly",
+      "cell (dragon ball)",
+      "dbs",
+      "dbz",
+      "dragon ball",
+      "dragon ball super",
+      "dragon ball z",
+      "freeza",
+      "frieza",
+      "future trunks",
+      "gogeta",
+      "gohan",
+      "goku",
+      "majin buu",
+      "piccolo",
+      "son gohan",
+      "son goku",
+      "super saiyan",
+      "trunks",
+      "ultra instinct",
+      "vegeta",
+      "vegito",
+      "whis"
+    ],
+    "characters": {
+      "Goku": [
+        "son goku",
+        "goku",
+        "kakarot",
+        "ultra instinct"
+      ],
+      "Vegeta": [
+        "vegeta",
+        "prince vegeta",
+        "ultra ego"
+      ],
+      "Gohan": [
+        "son gohan",
+        "gohan",
+        "beast gohan"
+      ],
+      "Trunks": [
+        "future trunks",
+        "trunks"
+      ],
+      "Broly": [
+        "broly",
+        "legendary super saiyan"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "billiard ball",
+      "crystal ball",
+      "dragon reptile"
+    ]
+  },
+  "death-note": {
+    "slug": "death-note",
+    "name": "Death Note",
+    "english_aliases": [
+      "Death Note"
+    ],
+    "japanese_aliases": [
+      "デスノート",
+      "Desu Nōto"
+    ],
+    "search_queries": [
+      "\"Death Note\"",
+      "Death Note"
+    ],
+    "wallhaven_tag_ids": [
+      5989
+    ],
+    "character_tag_ids": {
+      "Light Yagami": [
+        9525
+      ]
+    },
+    "allowlist_tags": [
+      "amane misa",
+      "death note",
+      "kira",
+      "l (death note)",
+      "l lawliet",
+      "lawliet",
+      "light yagami",
+      "mello (death note)",
+      "misa amane",
+      "near (death note)",
+      "rem (death note)",
+      "ryuk",
+      "shinigami (death note)",
+      "yagami light"
+    ],
+    "characters": {
+      "Light Yagami": [
+        "light yagami",
+        "yagami light",
+        "kira"
+      ],
+      "L Lawliet": [
+        "l (death note)",
+        "l lawliet",
+        "lawliet",
+        "l"
+      ],
+      "Ryuk": [
+        "ryuk",
+        "shinigami"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay",
+      "-notebook",
+      "-stationery"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "notebook",
+      "paper note",
+      "post-it",
+      "stationery",
+      "journal"
+    ]
+  },
+  "hunter-x-hunter": {
+    "slug": "hunter-x-hunter",
+    "name": "Hunter x Hunter",
+    "english_aliases": [
+      "Hunter x Hunter",
+      "HxH"
+    ],
+    "japanese_aliases": [
+      "ハンター×ハンター",
+      "Hantā Hantā"
+    ],
+    "search_queries": [
+      "\"Hunter x Hunter\"",
+      "Hunter x Hunter"
+    ],
+    "wallhaven_tag_ids": [
+      6051
+    ],
+    "character_tag_ids": {
+      "Chrollo Lucifer": [
+        17609
+      ]
+    },
+    "allowlist_tags": [
+      "chimera ant",
+      "chrollo lucifer",
+      "freecss gon",
+      "gon freecss",
+      "hisoka",
+      "hisoka morow",
+      "hunter x hunter",
+      "hxh",
+      "illumi zoldyck",
+      "isaac netero",
+      "killua zoldyck",
+      "kurapika",
+      "leorio paradinight",
+      "meruem",
+      "neferpitou",
+      "netero",
+      "phantom troupe",
+      "pitou",
+      "zoldyck killua"
+    ],
+    "characters": {
+      "Killua Zoldyck": [
+        "killua zoldyck",
+        "zoldyck killua",
+        "killua"
+      ],
+      "Gon Freecss": [
+        "gon freecss",
+        "freecss gon",
+        "gon"
+      ],
+      "Kurapika": [
+        "kurapika",
+        "kurapika kurta"
+      ],
+      "Hisoka": [
+        "hisoka morow",
+        "hisoka"
+      ],
+      "Chrollo Lucifer": [
+        "chrollo lucifer",
+        "chrollo"
+      ],
+      "Meruem": [
+        "meruem",
+        "chimera ant king"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "deer hunter",
+      "monster hunter game",
+      "hunting rifle"
+    ]
+  },
+  "frieren": {
+    "slug": "frieren",
+    "name": "Frieren",
+    "english_aliases": [
+      "Frieren: Beyond Journey's End",
+      "Frieren"
+    ],
+    "japanese_aliases": [
+      "葬送のフリーレン",
+      "Sousou no Frieren"
+    ],
+    "search_queries": [
+      "\"Sousou no Frieren\"",
+      "\"Frieren\""
+    ],
+    "wallhaven_tag_ids": [
+      117482
+    ],
+    "character_tag_ids": {
+      "Frieren": [
+        148110
+      ]
+    },
+    "allowlist_tags": [
+      "aura (frieren)",
+      "eisen (frieren)",
+      "fern (frieren)",
+      "flamme (frieren)",
+      "frieren",
+      "frieren: beyond journey's end",
+      "heiter",
+      "himmel",
+      "himmel (frieren)",
+      "land (frieren)",
+      "serie (frieren)",
+      "sousou no frieren",
+      "stark (frieren)",
+      "ubel (frieren)"
+    ],
+    "characters": {
+      "Frieren": [
+        "frieren",
+        "frieren the slayer"
+      ],
+      "Fern": [
+        "fern (frieren)",
+        "fern"
+      ],
+      "Stark": [
+        "stark (frieren)",
+        "stark"
+      ],
+      "Himmel": [
+        "himmel (frieren)",
+        "himmel",
+        "hero himmel"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "freezer appliance",
+      "frozen food",
+      "refrigerator"
+    ]
+  },
+  "my-hero-academia": {
+    "slug": "my-hero-academia",
+    "name": "My Hero Academia",
+    "english_aliases": [
+      "My Hero Academia",
+      "Boku no Hero Academia",
+      "MHA",
+      "BNHA"
+    ],
+    "japanese_aliases": [
+      "僕のヒーローアカデミア",
+      "Boku no Hīrō Akademia"
+    ],
+    "search_queries": [
+      "\"Boku no Hero Academia\"",
+      "\"My Hero Academia\""
+    ],
+    "wallhaven_tag_ids": [
+      36796
+    ],
+    "character_tag_ids": {
+      "Katsuki Bakugo": [
+        45465
+      ]
+    },
+    "allowlist_tags": [
+      "all for one",
+      "all might",
+      "bakugo katsuki",
+      "bakugou",
+      "bnha",
+      "boku no hero academia",
+      "dabi",
+      "deku",
+      "endeavor (mha)",
+      "eraserhead",
+      "hawks (mha)",
+      "himiko toga",
+      "izuku midoriya",
+      "katsuki bakugo",
+      "mha",
+      "midoriya izuku",
+      "my hero academia",
+      "ochaco uraraka",
+      "one for all",
+      "shota aizawa",
+      "shoto todoroki",
+      "todoroki shoto",
+      "toga himiko",
+      "tomura shigaraki",
+      "toshinori yagi",
+      "uraraka ochaco"
+    ],
+    "characters": {
+      "Izuku Midoriya": [
+        "izuku midoriya",
+        "midoriya izuku",
+        "deku"
+      ],
+      "Katsuki Bakugo": [
+        "katsuki bakugo",
+        "bakugo katsuki",
+        "bakugou",
+        "dynamight"
+      ],
+      "Shoto Todoroki": [
+        "shoto todoroki",
+        "todoroki shoto",
+        "todoroki"
+      ],
+      "All Might": [
+        "all might",
+        "toshinori yagi"
+      ],
+      "Himiko Toga": [
+        "himiko toga",
+        "toga himiko",
+        "toga"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "hero academy generic",
+      "boku generic"
+    ]
+  },
+  "vinland-saga": {
+    "slug": "vinland-saga",
+    "name": "Vinland Saga",
+    "english_aliases": [
+      "Vinland Saga"
+    ],
+    "japanese_aliases": [
+      "ヴィンランド・サガ",
+      "Vinrando Saga"
+    ],
+    "search_queries": [
+      "\"Vinland Saga\"",
+      "Vinland Saga"
+    ],
+    "wallhaven_tag_ids": [
+      90014
+    ],
+    "character_tag_ids": {
+      "Thorfinn": [
+        90018
+      ]
+    },
+    "allowlist_tags": [
+      "askeladd",
+      "canute (vinland saga)",
+      "einar (vinland saga)",
+      "karlsefni",
+      "norman",
+      "thorfinn",
+      "thorkell",
+      "thors",
+      "valhalla",
+      "viking",
+      "vinland saga"
+    ],
+    "characters": {
+      "Thorfinn": [
+        "thorfinn",
+        "thorfinn karlsefni"
+      ],
+      "Askeladd": [
+        "askeladd",
+        "lucius artorius castus"
+      ],
+      "Canute": [
+        "canute (vinland saga)",
+        "king canute"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "vinland map",
+      "vikings tv series",
+      "historical vinland"
+    ]
+  },
+  "black-clover": {
+    "slug": "black-clover",
+    "name": "Black Clover",
+    "english_aliases": [
+      "Black Clover"
+    ],
+    "japanese_aliases": [
+      "ブラッククローバー",
+      "Burakku Kurōbā"
+    ],
+    "search_queries": [
+      "\"Black Clover\"",
+      "Black Clover"
+    ],
+    "wallhaven_tag_ids": [
+      71091
+    ],
+    "character_tag_ids": {
+      "Megicula": [
+        183964
+      ]
+    },
+    "allowlist_tags": [
+      "asta",
+      "asta (black clover)",
+      "black bulls",
+      "black clover",
+      "charmy pappitson",
+      "clover kingdom",
+      "fuegoleon vermillion",
+      "julius novachrono",
+      "megicula",
+      "mereoleona vermillion",
+      "noelle silva",
+      "silva noelle",
+      "sukehiro yami",
+      "yami sukehiro",
+      "yuno",
+      "yuno (black clover)"
+    ],
+    "characters": {
+      "Asta": [
+        "asta (black clover)",
+        "asta",
+        "anti-magic"
+      ],
+      "Yuno": [
+        "yuno (black clover)",
+        "yuno",
+        "yuno grinberryall"
+      ],
+      "Noelle Silva": [
+        "noelle silva",
+        "noelle"
+      ],
+      "Yami Sukehiro": [
+        "yami sukehiro",
+        "yami",
+        "captain yami"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay",
+      "-clover",
+      "-shamrock"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "four-leaf clover",
+      "shamrock",
+      "clover field",
+      "clover plant"
+    ]
+  },
+  "fate-series": {
+    "slug": "fate-series",
+    "name": "Fate Series",
+    "english_aliases": [
+      "Fate Series",
+      "Fate/stay night",
+      "Fate/Grand Order",
+      "Fate/Zero",
+      "Type-Moon"
+    ],
+    "japanese_aliases": [
+      "フェイト",
+      "Feito Shiriizu"
+    ],
+    "search_queries": [
+      "\"Fate series\"",
+      "\"Fate/stay night\"",
+      "\"Fate/Zero\""
+    ],
+    "wallhaven_tag_ids": [
+      878,
+      81992
+    ],
+    "character_tag_ids": {
+      "Saber": [
+        705
+      ]
+    },
+    "allowlist_tags": [
+      "altria pendragon",
+      "archer (fate)",
+      "artoria pendragon",
+      "astolfo (fate)",
+      "berserker (fate)",
+      "cu chulainn",
+      "emiya shirou",
+      "fate series",
+      "fate/apocrypha",
+      "fate/grand order",
+      "fate/stay night",
+      "fate/zero",
+      "fgo",
+      "gilgamesh (fate)",
+      "holy grail war",
+      "jeanne d'arc (fate)",
+      "kirei kotomine",
+      "lancer (fate)",
+      "mash kyrielight",
+      "matou sakura",
+      "medusa (fate)",
+      "rider (fate)",
+      "rin tohsaka",
+      "saber (fate)",
+      "sakura mato",
+      "shirou emiya",
+      "tohsaka rin"
+    ],
+    "characters": {
+      "Saber": [
+        "saber (fate)",
+        "artoria pendragon",
+        "altria pendragon",
+        "saber"
+      ],
+      "Rin Tohsaka": [
+        "rin tohsaka",
+        "tohsaka rin",
+        "rin"
+      ],
+      "Archer": [
+        "archer (fate)",
+        "emiya",
+        "heroic spirit emiya"
+      ],
+      "Gilgamesh": [
+        "gilgamesh (fate)",
+        "king of heroes",
+        "gilgamesh"
+      ],
+      "Mash Kyrielight": [
+        "mash kyrielight",
+        "shielder (fate)"
+      ]
+    },
+    "negative_keywords": [
+      "-original",
+      "-cosplay"
+    ],
+    "excluded_tag_ids": [],
+    "excluded_keywords": [
+      "destiny",
+      "wheel of fate",
+      "twist of fate",
+      "fate generic"
+    ]
+  }
+}

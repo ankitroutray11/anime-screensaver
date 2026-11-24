@@ -1,0 +1,10 @@
+{
+  "mode": "kiosk",
+  "browser_path": "auto",
+  "target_monitor": "auto",
+  "window_width": 1920,
+  "window_height": 1080,
+  "high_dpi_scaling": true,
+  "user_data_profile": true,
+  "autostart_on_boot": false
+}

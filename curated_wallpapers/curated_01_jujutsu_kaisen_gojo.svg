@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3840 2160" width="3840" height="2160">
+  <defs>
+    <radialGradient id="grad-bg" cx="50%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#08182B" />
+      <stop offset="100%" stop-color="#030712" />
+    </radialGradient>
+    <linearGradient id="grad-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.4" />
+    </linearGradient>
+    <radialGradient id="grad-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="40" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="3840" height="2160" fill="url(#grad-bg)" />
+  <circle cx="1920" cy="1080" r="900" fill="url(#grad-glow)" />
+
+  <!-- Geometric Grid & Circuit Lines -->
+  <g stroke="#00F0FF" stroke-opacity="0.08" stroke-width="2">
+    <line x1="0" y1="1080" x2="3840" y2="1080" />
+    <line x1="1920" y1="0" x2="1920" y2="2160" />
+    <circle cx="1920" cy="1080" r="500" fill="none" stroke-dasharray="12 12" />
+    <circle cx="1920" cy="1080" r="750" fill="none" stroke-width="1.5" />
+    <circle cx="1920" cy="1080" r="1050" fill="none" stroke-dasharray="8 16" />
+  </g>
+
+  <!-- Central Emblem Elements -->
+  <g transform="translate(1920, 1080)" filter="url(#glow)">
+    <polygon points="0,-320 277,-160 277,160 0,320 -277,160 -277,-160" 
+             fill="none" stroke="url(#grad-accent)" stroke-width="6" />
+    <polygon points="0,-260 225,-130 225,130 0,260 -225,130 -225,-130" 
+             fill="none" stroke="#93C5FD" stroke-width="2" stroke-dasharray="10 20" opacity="0.6" />
+    
+    <!-- Core Ring -->
+    <circle cx="0" cy="0" r="120" fill="none" stroke="#00F0FF" stroke-width="4" />
+    <circle cx="0" cy="0" r="40" fill="#00F0FF" opacity="0.8" />
+  </g>
+
+  <!-- Japanese Kanji Typography -->
+  <text x="1920" y="580" 
+        font-family="'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif" 
+        font-size="54" 
+        font-weight="900" 
+        letter-spacing="18" 
+        fill="#00F0FF" 
+        text-anchor="middle" 
+        opacity="0.85" 
+        filter="url(#glow)">
+    領域展開・無量空処
+  </text>
+
+  <!-- Franchise Name -->
+  <text x="1920" y="670" 
+        font-family="'Inter', 'Montserrat', sans-serif" 
+        font-size="36" 
+        font-weight="800" 
+        letter-spacing="12" 
+        fill="#FFFFFF" 
+        text-anchor="middle" 
+        opacity="0.95">
+    JUJUTSU KAISEN
+  </text>
+
+  <!-- Character & Title -->
+  <text x="1920" y="1560" 
+        font-family="'Inter', 'Montserrat', sans-serif" 
+        font-size="42" 
+        font-weight="700" 
+        letter-spacing="8" 
+        fill="#93C5FD" 
+        text-anchor="middle" 
+        opacity="0.9">
+    Satoru Gojo
+  </text>
+
+  <text x="1920" y="1630" 
+        font-family="'Inter', 'Outfit', sans-serif" 
+        font-size="24" 
+        font-weight="500" 
+        letter-spacing="6" 
+        fill="#94A3B8" 
+        text-anchor="middle">
+    Domain Expansion: Unlimited Void
+  </text>
+
+  <!-- Quote -->
+  <text x="1920" y="1720" 
+        font-family="'Inter', italic" 
+        font-size="20" 
+        letter-spacing="3" 
+        fill="#64748B" 
+        text-anchor="middle" 
+        font-style="italic">
+    "Throughout Heaven and Earth, I alone am the honored one."
+  </text>
+
+  <!-- Technical Overlay Details -->
+  <text x="160" y="180" font-family="monospace" font-size="20" fill="#00F0FF" opacity="0.6">KURO // CURATED OFFLINE MASTER [LEVEL 3]</text>
+  <text x="160" y="215" font-family="monospace" font-size="16" fill="#64748B">FRANCHISE_ID: jujutsu_kaisen | RESOLUTION: 3840x2160</text>
+  <text x="3680" y="180" font-family="monospace" font-size="20" fill="#00F0FF" opacity="0.6" text-anchor="end">ORIGIN: MASTER ARCHIVE</text>
+  <text x="3680" y="215" font-family="monospace" font-size="16" fill="#64748B" text-anchor="end">SECURE LOCALHOST STREAM</text>
+
+  <!-- Bottom HUD accents -->
+  <line x1="160" y1="2000" x2="1000" y2="2000" stroke="#00F0FF" stroke-width="2" opacity="0.4" />
+  <line x1="2840" y1="2000" x2="3680" y2="2000" stroke="#00F0FF" stroke-width="2" opacity="0.4" />
+</svg>
