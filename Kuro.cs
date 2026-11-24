@@ -20,7 +20,8 @@ namespace KuroLauncher
 
             ProcessStartInfo psi = new ProcessStartInfo();
             psi.FileName = pythonw;
-            psi.Arguments = "\"" + launcherPy + "\" start";
+            string passArgs = args.Length > 0 ? string.Join(" ", args) : "start";
+            psi.Arguments = "\"" + launcherPy + "\" " + passArgs;
             psi.WorkingDirectory = appDir;
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;

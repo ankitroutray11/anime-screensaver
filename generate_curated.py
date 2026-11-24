@@ -266,4 +266,148 @@ for art in artworks:
     meta_path = curated_dir / f"{art['id']}.json"
     meta_path.write_text(json.dumps(art, indent=2), encoding="utf-8")
 
-print(f"Generated {len(artworks)} curated wallpapers in {curated_dir}")
+# ==============================================================================
+# 32:9 DUAL-MONITOR PANORAMIC ARTWORKS (3840 x 1080)
+# Designed specifically to span across two side-by-side 1080p / 1440p displays
+# ==============================================================================
+dual_artworks = [
+    {
+        "id": "curated_dual_01_frieren_panorama",
+        "file": "curated_dual_01_frieren_panorama.svg",
+        "anime": "Frieren",
+        "character": "Frieren & Fern",
+        "resolution": "3840x1080",
+        "aspect_ratio": "32:9",
+        "is_dual_span": True,
+        "title": "Beyond Journey's End: Celestial Horizon (32:9 Panoramic)",
+        "theme_color": "#38BDF8",
+        "kanji_left": "葬送のフリーレン",
+        "kanji_right": "魂の眠る地へ",
+        "subtitle_left": "FRIEREN · MAGE OF THE HERO PARTY",
+        "subtitle_right": "FERN & STARK · THE NEW DAWN",
+        "quote": "A journey that spanned ten years, yet lives forever across the stars.",
+        "bg1": "#030712",
+        "bg2": "#0A192F",
+        "accent": "#38BDF8",
+        "accent2": "#C084FC",
+        "sub": "#FBBF24"
+    },
+    {
+        "id": "curated_dual_02_jujutsu_kaisen_clash",
+        "file": "curated_dual_02_jujutsu_kaisen_clash.svg",
+        "anime": "Jujutsu Kaisen",
+        "character": "Gojo & Sukuna",
+        "resolution": "3840x1080",
+        "aspect_ratio": "32:9",
+        "is_dual_span": True,
+        "title": "Duality of Infinity: Void & Shrine (32:9 Panoramic)",
+        "theme_color": "#00F0FF",
+        "kanji_left": "無量空処・六眼",
+        "kanji_right": "伏魔御廚子・呪いの王",
+        "subtitle_left": "SATORU GOJO · UNLIMITED VOID",
+        "subtitle_right": "RYOMEN SUKUNA · MALEVOLENT SHRINE",
+        "quote": "Throughout Heaven and Earth, two monsters shape the boundary of jujutsu.",
+        "bg1": "#05020A",
+        "bg2": "#1E0824",
+        "accent": "#00F0FF",
+        "accent2": "#EF4444",
+        "sub": "#A855F7"
+    },
+    {
+        "id": "curated_dual_03_cyberpunk_neon_horizon",
+        "file": "curated_dual_03_cyberpunk_neon_horizon.svg",
+        "anime": "Cyberpunk: Edgerunners",
+        "character": "David & Lucy",
+        "resolution": "3840x1080",
+        "aspect_ratio": "32:9",
+        "is_dual_span": True,
+        "title": "Night City Megastructure to Lunar Sky (32:9 Panoramic)",
+        "theme_color": "#FEE500",
+        "kanji_left": "ナイトシティ・電脳",
+        "kanji_right": "月への約束・夢",
+        "subtitle_left": "DAVID MARTINEZ · SANDEVISTAN",
+        "subtitle_right": "LUCY KUSHINADA · DEEP NET",
+        "quote": "I couldn't wait for you then. But now you're flying to the moon.",
+        "bg1": "#07080C",
+        "bg2": "#1A092A",
+        "accent": "#FEE500",
+        "accent2": "#EC4899",
+        "sub": "#06B6D4"
+    }
+]
+
+for dart in dual_artworks:
+    d_svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3840 1080" width="3840" height="1080">
+  <defs>
+    <linearGradient id="dgrad-bg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="{dart['bg1']}" />
+      <stop offset="50%" stop-color="{dart['bg2']}" />
+      <stop offset="100%" stop-color="{dart['bg1']}" />
+    </linearGradient>
+    <linearGradient id="dgrad-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="{dart['accent']}" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="{dart['accent2']}" stop-opacity="0.5" />
+    </linearGradient>
+    <radialGradient id="dgrad-glow-left" cx="25%" cy="50%" r="40%">
+      <stop offset="0%" stop-color="{dart['accent']}" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="{dart['accent']}" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="dgrad-glow-right" cx="75%" cy="50%" r="40%">
+      <stop offset="0%" stop-color="{dart['accent2']}" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="{dart['accent2']}" stop-opacity="0" />
+    </radialGradient>
+    <filter id="dglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="30" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background spanning both displays -->
+  <rect width="3840" height="1080" fill="url(#dgrad-bg)" />
+  <rect width="1920" height="1080" fill="url(#dgrad-glow-left)" />
+  <rect x="1920" width="1920" height="1080" fill="url(#dgrad-glow-right)" />
+
+  <!-- Continuous Horizon Connection Lines -->
+  <g stroke="{dart['accent']}" stroke-opacity="0.12" stroke-width="1.5">
+    <line x1="0" y1="540" x2="3840" y2="540" />
+    <line x1="0" y1="620" x2="3840" y2="620" stroke-dasharray="16 16" />
+    <line x1="0" y1="460" x2="3840" y2="460" stroke-dasharray="8 24" />
+  </g>
+
+  <!-- Physical Bezel Center Seam Marker (Subtle guide at x=1920) -->
+  <line x1="1920" y1="0" x2="1920" y2="1080" stroke="{dart['accent']}" stroke-opacity="0.08" stroke-width="1" stroke-dasharray="4 8" />
+
+  <!-- LEFT MONITOR COMPOSITION (Center: x=960, y=540) -->
+  <g transform="translate(960, 540)" filter="url(#dglow)">
+    <polygon points="0,-180 156,-90 156,90 0,180 -156,90 -156,-90" fill="none" stroke="{dart['accent']}" stroke-width="4" />
+    <circle cx="0" cy="0" r="80" fill="none" stroke="{dart['sub']}" stroke-width="2" stroke-dasharray="6 12" />
+    <circle cx="0" cy="0" r="28" fill="{dart['accent']}" opacity="0.8" />
+  </g>
+  <text x="960" y="260" font-family="'Noto Sans JP', sans-serif" font-size="34" font-weight="900" letter-spacing="12" fill="{dart['accent']}" text-anchor="middle" filter="url(#dglow)">{dart['kanji_left']}</text>
+  <text x="960" y="320" font-family="'Inter', sans-serif" font-size="22" font-weight="800" letter-spacing="6" fill="#FFFFFF" text-anchor="middle">{dart['subtitle_left']}</text>
+  <text x="960" y="780" font-family="'Inter', monospace" font-size="14" fill="{dart['accent']}" opacity="0.7" letter-spacing="4" text-anchor="middle">[ DISPLAY 1 · LEFT WING ]</text>
+
+  <!-- RIGHT MONITOR COMPOSITION (Center: x=2880, y=540) -->
+  <g transform="translate(2880, 540)" filter="url(#dglow)">
+    <polygon points="0,-180 156,-90 156,90 0,180 -156,90 -156,-90" fill="none" stroke="{dart['accent2']}" stroke-width="4" />
+    <circle cx="0" cy="0" r="80" fill="none" stroke="{dart['sub']}" stroke-width="2" stroke-dasharray="6 12" />
+    <circle cx="0" cy="0" r="28" fill="{dart['accent2']}" opacity="0.8" />
+  </g>
+  <text x="2880" y="260" font-family="'Noto Sans JP', sans-serif" font-size="34" font-weight="900" letter-spacing="12" fill="{dart['accent2']}" text-anchor="middle" filter="url(#dglow)">{dart['kanji_right']}</text>
+  <text x="2880" y="320" font-family="'Inter', sans-serif" font-size="22" font-weight="800" letter-spacing="6" fill="#FFFFFF" text-anchor="middle">{dart['subtitle_right']}</text>
+  <text x="2880" y="780" font-family="'Inter', monospace" font-size="14" fill="{dart['accent2']}" opacity="0.7" letter-spacing="4" text-anchor="middle">[ DISPLAY 2 · RIGHT WING ]</text>
+
+  <!-- Center Quote Spanning Seam -->
+  <text x="1920" y="960" font-family="'Inter', italic" font-size="18" letter-spacing="4" fill="#94A3B8" text-anchor="middle" font-style="italic">"{dart['quote']}"</text>
+  <text x="1920" y="1000" font-family="'Inter', sans-serif" font-size="14" font-weight="700" letter-spacing="8" fill="{dart['accent']}" text-anchor="middle" opacity="0.8">KURO // DUAL-MONITOR 32:9 CINEMATIC PANORAMA · 3840×1080</text>
+</svg>
+"""
+    svg_p = curated_dir / dart["file"]
+    svg_p.write_text(d_svg, encoding="utf-8")
+    meta_p = curated_dir / f"{dart['id']}.json"
+    meta_p.write_text(json.dumps(dart, indent=2), encoding="utf-8")
+
+print(f"Generated {len(artworks)} 16:9 and {len(dual_artworks)} 32:9 dual-monitor wallpapers in {curated_dir}")

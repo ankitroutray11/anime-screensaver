@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from contextlib import contextmanager
 
-CURRENT_SCHEMA_VERSION = 16
+CURRENT_SCHEMA_VERSION = 17
 
 class DatabaseManager:
     def __init__(self, db_path: Path):
@@ -841,6 +841,33 @@ class DatabaseManager:
                 conn.commit()
                 print("[KuroDB] Applied Migration v16: Added Wallhaven API Compatibility & Contract Engine schema.")
 
+            if current_version < 17:
+                # Migration 17: High-Resolution Animated GIF Support
+                cur.execute("PRAGMA table_info(wallpaper_lifecycle)")
+                lifecycle_cols = [col[1] for col in cur.fetchall()]
+                if "is_animated" not in lifecycle_cols:
+                    cur.execute("ALTER TABLE wallpaper_lifecycle ADD COLUMN is_animated INTEGER DEFAULT 0")
+                if "media_type" not in lifecycle_cols:
+                    cur.execute("ALTER TABLE wallpaper_lifecycle ADD COLUMN media_type TEXT DEFAULT 'static'")
+
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS gif_settings (
+                        id INTEGER PRIMARY KEY CHECK(id=1),
+                        enabled INTEGER DEFAULT 1,
+                        mode TEXT DEFAULT 'all',
+                        prefer_hd INTEGER DEFAULT 1,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cur.execute("""
+                    INSERT OR IGNORE INTO gif_settings (id, enabled, mode, prefer_hd)
+                    VALUES (1, 1, 'all', 1)
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_lifecycle_media_type ON wallpaper_lifecycle(status, is_animated, media_type)")
+                cur.execute("INSERT OR REPLACE INTO schema_migrations (version) VALUES (17)")
+                conn.commit()
+                print("[KuroDB] Applied Migration v17: High-Resolution Animated GIF Support schema.")
+
             # Performance index for fast historical explorer queries
             cur.execute("PRAGMA table_info(wallpaper_lifecycle)")
             cols = [col[1] for col in cur.fetchall()]
@@ -1185,7 +1212,7 @@ class DatabaseManager:
         if not curated_dir.is_dir():
             return 0
         added = 0
-        supported_exts = {".svg", ".jpg", ".jpeg", ".png", ".webp"}
+        supported_exts = {".svg", ".jpg", ".jpeg", ".png", ".webp", ".gif"}
         with self.get_connection() as conn:
             cur = conn.cursor()
             for file_path in sorted(curated_dir.iterdir()):
@@ -1207,27 +1234,31 @@ class DatabaseManager:
 
                     anime = meta.get("anime") or "Curated Anime"
                     character = meta.get("character")
-                    resolution = meta.get("resolution") or "3840x2160"
+                    resolution = meta.get("resolution") or ("1920x1080" if file_path.suffix.lower() == ".gif" else "3840x2160")
                     tags = json.dumps(meta.get("tags", ["offline", "curated", anime.lower()]))
                     url = f"/api/image/{item_id}"
+                    is_gif = 1 if (file_path.suffix.lower() == ".gif" or meta.get("is_animated") or meta.get("media_type") == "gif") else 0
+                    m_type = "gif" if is_gif else "static"
 
                     try:
                         cur.execute("""
                             INSERT INTO wallpaper_lifecycle (
                                 id, url, resolution, anime, character, tags, source, status, level, is_cached, local_path,
-                                safety_rating, safety_reason, provider_purity_raw
-                            ) VALUES (?, ?, ?, ?, ?, ?, 'Curated Offline', 'UNSEEN', 3, 1, ?, 'SAFE', 'curated_offline', 'safe')
-                        """, (item_id, url, resolution, anime, character, tags, rel_path))
+                                safety_rating, safety_reason, provider_purity_raw, is_animated, media_type
+                            ) VALUES (?, ?, ?, ?, ?, ?, 'Curated Offline', 'UNSEEN', 3, 1, ?, 'SAFE', 'curated_offline', 'safe', ?, ?)
+                        """, (item_id, url, resolution, anime, character, tags, rel_path, is_gif, m_type))
                         added += 1
                     except sqlite3.IntegrityError:
                         # Ensure level, is_cached, and local_path are set if missing
                         cur.execute("""
                             UPDATE wallpaper_lifecycle
                             SET level = 3, is_cached = 1, local_path = ?,
+                                is_animated = COALESCE(is_animated, ?),
+                                media_type = COALESCE(media_type, ?),
                                 safety_rating = COALESCE(safety_rating, 'SAFE'),
                                 safety_reason = COALESCE(safety_reason, 'curated_offline')
                             WHERE id = ? AND (local_path IS NULL OR is_cached != 1)
-                        """, (rel_path, item_id))
+                        """, (rel_path, is_gif, m_type, item_id))
             conn.commit()
         if added > 0:
             print(f"[KuroDB] Indexed {added} new curated offline artwork(s) into Level 3 pool.")
@@ -1253,13 +1284,16 @@ class DatabaseManager:
                     else:
                         tags_val = str(tags_raw) if tags_raw is not None else None
 
+                    is_anim = 1 if (item.get("is_animated") or str(img_url).lower().endswith(".gif") or item.get("media_type") == "gif") else 0
+                    m_type = "gif" if is_anim else item.get("media_type", "static")
+
                     cur.execute("""
                         INSERT INTO wallpaper_lifecycle (
                             id, url, resolution, anime, character, tags, source, status, level, is_cached, local_path,
                             quality_score, technical_score, popularity_score, dimension_x, dimension_y, file_size, views, favorites, scored_at,
                             uploader, upload_date, source_url, query_strategy,
-                            safety_rating, safety_reason, provider_purity_raw
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'UNSEEN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            safety_rating, safety_reason, provider_purity_raw, is_animated, media_type
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'UNSEEN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         img_id,
                         img_url,
@@ -1286,7 +1320,9 @@ class DatabaseManager:
                         item.get("query_strategy", "verified_tag_id"),
                         item.get("safety_rating", "SAFE"),
                         item.get("safety_reason", "verified_sfw"),
-                        item.get("provider_purity_raw")
+                        item.get("provider_purity_raw"),
+                        is_anim,
+                        m_type
                     ))
                     added += 1
                 except sqlite3.IntegrityError:
@@ -1302,7 +1338,9 @@ class DatabaseManager:
                             query_strategy = COALESCE(query_strategy, ?),
                             safety_rating = COALESCE(safety_rating, ?),
                             safety_reason = COALESCE(safety_reason, ?),
-                            provider_purity_raw = COALESCE(provider_purity_raw, ?)
+                            provider_purity_raw = COALESCE(provider_purity_raw, ?),
+                            is_animated = COALESCE(is_animated, ?),
+                            media_type = COALESCE(media_type, ?)
                         WHERE id = ?
                     """, (
                         item.get("uploader"),
@@ -1315,6 +1353,8 @@ class DatabaseManager:
                         item.get("safety_rating"),
                         item.get("safety_reason"),
                         item.get("provider_purity_raw"),
+                        is_anim,
+                        m_type,
                         img_id
                     ))
                     continue
@@ -1333,7 +1373,8 @@ class DatabaseManager:
         require_cached: bool = False,
         recent_franchises: Optional[List[str]] = None,
         apply_personalization: bool = True,
-        min_quality: Optional[float] = None
+        min_quality: Optional[float] = None,
+        media_type: str = "all"
     ) -> Optional[Dict[str, Any]]:
         """
         Atomically reserves the next available UNSEEN wallpaper.
@@ -1399,6 +1440,12 @@ class DatabaseManager:
                         clauses.append("(quality_score IS NULL OR quality_score >= ?)")
                         params.append(min_quality)
 
+                    # Media type filter (Static vs Animated GIF)
+                    if media_type == "static":
+                        clauses.append("(is_animated = 0 OR is_animated IS NULL)")
+                    elif media_type == "gif":
+                        clauses.append("(is_animated = 1 OR media_type = 'gif' OR url LIKE '%.gif')")
+
                     where_sql = " AND ".join(clauses)
 
                     order_by_terms = []
@@ -1449,11 +1496,23 @@ class DatabaseManager:
                                 {order_by_clause}
                             LIMIT 1
                         )
-                        RETURNING id, url, resolution, anime, character, source, level, is_cached, local_path, quality_score, technical_score, popularity_score, dimension_x, dimension_y, file_size, views, favorites, uploader, upload_date, source_url, tags, safety_rating, safety_reason, provider_purity_raw
+                        RETURNING id, url, resolution, anime, character, source, level, is_cached, local_path, quality_score, technical_score, popularity_score, dimension_x, dimension_y, file_size, views, favorites, uploader, upload_date, source_url, tags, safety_rating, safety_reason, provider_purity_raw, is_animated, media_type
                     """
 
                     cur.execute(query, params)
                     row = cur.fetchone()
+                    if not row and media_type == "gif":
+                        # Auto-recycle displayed gifs so animated GIF playback never halts
+                        cur.execute("""
+                            UPDATE wallpaper_lifecycle
+                            SET status = 'UNSEEN'
+                            WHERE (is_animated = 1 OR media_type = 'gif' OR url LIKE '%.gif')
+                              AND status = 'DISPLAYED'
+                              AND id NOT IN (SELECT wallpaper_id FROM blacklist)
+                        """)
+                        if cur.rowcount > 0:
+                            cur.execute(query, params)
+                            row = cur.fetchone()
                     cur.execute("COMMIT")
                     if row:
                         row_id = row[0]
@@ -1493,6 +1552,8 @@ class DatabaseManager:
                             "safety_rating": row[21] if len(row) > 21 and row[21] is not None else "SAFE",
                             "safety_reason": row[22] if len(row) > 22 and row[22] is not None else "verified_sfw",
                             "provider_purity_raw": row[23] if len(row) > 23 and row[23] is not None else "sfw",
+                            "is_animated": bool(row[24]) if len(row) > 24 and row[24] is not None else (1 if raw_url.lower().endswith(".gif") else 0),
+                            "media_type": row[25] if len(row) > 25 and row[25] is not None else ("gif" if raw_url.lower().endswith(".gif") else "static"),
                             "composition": comp,
                             "status": "RESERVED",
                             "reservation_token": token
@@ -1560,8 +1621,12 @@ class DatabaseManager:
             cur.execute("SELECT COUNT(*) FROM wallpaper_lifecycle WHERE is_cached = 1 AND status = 'UNSEEN'")
             cached_unseen = cur.fetchone()[0]
 
+            cur.execute("SELECT COUNT(*) FROM wallpaper_lifecycle WHERE (is_animated = 1 OR media_type = 'gif' OR url LIKE '%.gif') AND status = 'UNSEEN'")
+            unseen_gifs = cur.fetchone()[0]
+
             return {
                 "unseen_count": counts.get("UNSEEN", 0),
+                "unseen_gif_count": unseen_gifs,
                 "reserved_count": counts.get("RESERVED", 0),
                 "displayed_count": counts.get("DISPLAYED", 0),
                 "failed_count": counts.get("FAILED", 0),
@@ -1572,6 +1637,14 @@ class DatabaseManager:
                 "curated_unseen_count": curated_unseen,
                 "total_catalog": sum(counts.values())
             }
+
+    def get_unseen_gif_count(self) -> int:
+        """Returns the number of unseen animated GIF candidates in the database."""
+        with self.get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM wallpaper_lifecycle WHERE (is_animated = 1 OR media_type = 'gif' OR url LIKE '%.gif') AND status = 'UNSEEN'")
+            row = cur.fetchone()
+            return row[0] if row else 0
 
     def get_recent_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         with self.get_connection() as conn:
@@ -2665,6 +2738,37 @@ class DatabaseManager:
             conn.commit()
             return True
 
+    def get_gif_settings(self) -> Dict[str, Any]:
+        """Retrieves animated GIF playback settings."""
+        with self.get_connection() as conn:
+            cur = conn.cursor()
+            try:
+                cur.execute("SELECT enabled, mode, prefer_hd FROM gif_settings WHERE id = 1")
+                row = cur.fetchone()
+                if row:
+                    return {
+                        "enabled": bool(row[0]),
+                        "mode": str(row[1] or "all"),
+                        "prefer_hd": bool(row[2])
+                    }
+            except Exception:
+                pass
+            return {"enabled": True, "mode": "all", "prefer_hd": True}
+
+    def save_gif_settings(self, enabled: bool = True, mode: str = "all", prefer_hd: bool = True) -> bool:
+        """Persists animated GIF playback preferences."""
+        clean_mode = mode if mode in ("all", "static", "gif") else "all"
+        with self.write_transaction() as (conn, cur):
+            cur.execute("""
+                INSERT INTO gif_settings (id, enabled, mode, prefer_hd, updated_at)
+                VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO UPDATE SET
+                    enabled = excluded.enabled,
+                    mode = excluded.mode,
+                    prefer_hd = excluded.prefer_hd,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (1 if enabled else 0, clean_mode, 1 if prefer_hd else 0))
+            return cur.rowcount > 0
 
     def update_wallpaper_quality(
         self,

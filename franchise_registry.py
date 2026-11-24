@@ -665,6 +665,8 @@ class FranchiseRegistry:
         ratio_param = ""
         if ratio == "landscape":
             ratio_param = "&ratios=16x9,16x10"
+        elif ratio in ["dual", "32:9", "32x9", "dual_screen"]:
+            ratio_param = "&ratios=32x9,32x10,21x9"
         elif ratio == "ultrawide":
             ratio_param = "&ratios=21x9,32x9,16x9"
         elif ratio == "portrait":
@@ -702,6 +704,8 @@ class FranchiseRegistry:
         ratio_param = ""
         if ratio == "landscape":
             ratio_param = "&ratios=16x9,16x10"
+        elif ratio in ["dual", "32:9", "32x9", "dual_screen"]:
+            ratio_param = "&ratios=32x9,32x10,21x9"
         elif ratio == "ultrawide":
             ratio_param = "&ratios=21x9,32x9,16x9"
         elif ratio == "portrait":
@@ -762,6 +766,8 @@ class FranchiseRegistry:
         ratio_param = ""
         if ratio == "landscape":
             ratio_param = "&ratios=16x9,16x10"
+        elif ratio in ["dual", "32:9", "32x9", "dual_screen"]:
+            ratio_param = "&ratios=32x9,32x10,21x9"
         elif ratio == "ultrawide":
             ratio_param = "&ratios=21x9,32x9,16x9"
         elif ratio == "portrait":

@@ -1,7 +1,8 @@
 {
-  "mode": "kiosk",
+  "mode": "fullscreen",
   "browser_path": "auto",
-  "target_monitor": "auto",
+  "target_monitor": "primary",
+  "dual_mode": "span",
   "window_width": 1920,
   "window_height": 1080,
   "high_dpi_scaling": true,

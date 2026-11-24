@@ -137,7 +137,12 @@
     historySortBy: 'newest',
     historySearchQuery: '',
     historyTotalPages: 1,
-    historyTotalCount: 0
+    historyTotalCount: 0,
+    gifSettings: {
+      enabled: true,
+      mode: 'all',
+      prefer_hd: true
+    }
   };
 
   // DOM Elements
@@ -148,6 +153,7 @@
     statsBadge: document.getElementById('stats-badge'),
     networkPill: document.getElementById('network-pill'),
     metaOfflineBadge: document.getElementById('meta-offline-badge'),
+    metaGifBadge: document.getElementById('meta-gif-badge'),
     clockHoursMins: document.getElementById('clock-hours-mins'),
     clockSeconds: document.getElementById('clock-seconds'),
     clockAmPm: document.getElementById('clock-ampm'),
@@ -187,6 +193,10 @@
     btnSettingsOpen: document.getElementById('btn-settings-open'),
     btnSettingsClose: document.getElementById('btn-settings-close'),
     btnFullscreen: document.getElementById('btn-fullscreen'),
+    btnGifMode: document.getElementById('btn-gif-mode'),
+    gifBtnIcon: document.getElementById('gif-btn-icon'),
+    gifBtnLabel: document.getElementById('gif-btn-label'),
+    btnDualScreenToggle: document.getElementById('btn-dual-screen-toggle'),
     btnToggleHud: document.getElementById('btn-toggle-hud'),
     btnToggleParticles: document.getElementById('btn-toggle-particles'),
     btnToggleDiagnostics: document.getElementById('btn-toggle-diagnostics'),
@@ -250,6 +260,10 @@
     settingAnime: document.getElementById('setting-anime'),
     settingCharacter: document.getElementById('setting-character'),
     groupCharacter: document.getElementById('group-character'),
+    settingEnableGifs: document.getElementById('setting-enable-gifs'),
+    settingGifMode: document.getElementById('setting-gif-mode'),
+    settingGifHd: document.getElementById('setting-gif-hd'),
+    gifSubcontrols: document.getElementById('gif-subcontrols'),
     // Setting inputs
     settingDisplayMode: document.getElementById('setting-display-mode'),
     settingInterval: document.getElementById('setting-interval'),
@@ -583,6 +597,14 @@
     setupDisplayListeners();
     initNetworkWatchers();
     detectDisplayTopology();
+    const urlParams = new URLSearchParams(window.location.search);
+    STATE.screenIndex = parseInt(urlParams.get('screen') || '0', 10);
+    STATE.isDualScreen = urlParams.get('dual') === '1' || STATE.screenIndex > 0;
+    STATE.dualMode = urlParams.get('dual_mode') || 'span';
+    if (STATE.screenIndex > 0) {
+      document.body.classList.add('screen-extension', `screen-${STATE.screenIndex}`);
+    }
+
     setupClock();
     setupWeather();
     setupParticles();
@@ -604,6 +626,7 @@
     initPerformanceMonitoring();
     initHistoryExplorer();
     initModerationSystem();
+    await initGifSettings();
     startIdleDetector();
 
     // Restore recent displayed history from backend across restarts
@@ -1379,7 +1402,10 @@
     try {
       const charParam = (STATE.currentCharacter && STATE.currentCharacter !== 'all') ? `&character=${encodeURIComponent(STATE.currentCharacter)}` : '';
       const effectiveRatio = getEffectiveRatio();
-      const url = `${STATE.backendBase}/api/next?anime=${encodeURIComponent(STATE.currentAnime)}${charParam}&ratio=${effectiveRatio}`;
+      const gifMode = (STATE.gifSettings && STATE.gifSettings.enabled) ? (STATE.gifSettings.mode || 'all') : 'static';
+      const gifParam = gifMode !== 'all' ? `&media_type=${encodeURIComponent(gifMode)}` : '';
+      const screenParam = `&screen=${STATE.screenIndex}&dual_mode=${encodeURIComponent(STATE.dualMode || 'span')}`;
+      const url = `${STATE.backendBase}/api/next?anime=${encodeURIComponent(STATE.currentAnime)}${charParam}&ratio=${effectiveRatio}${gifParam}${screenParam}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
       if (res.ok) {
         const data = await res.json();
@@ -1633,7 +1659,8 @@
     const incomingLayer = STATE.activeLayer === 'a' ? DOM.layerB : DOM.layerA;
     const outgoingLayer = STATE.activeLayer === 'a' ? DOM.layerA : DOM.layerB;
 
-    const motion = selectMotionVariant();
+    const isGif = Boolean(wallpaper.is_animated || wallpaper.media_type === 'gif' || (wallpaper.url && wallpaper.url.toLowerCase().includes('.gif')));
+    const motion = isGif ? 'motion-none' : selectMotionVariant();
     const transition = selectTransitionStyle();
     const isInstant = transition === 'instant';
     const durationSec = isInstant ? 0.05 : STATE.transitionDuration;
@@ -1675,6 +1702,24 @@
     incomingLayer.style.setProperty('--focal-x', `${focal.x}%`);
     incomingLayer.style.setProperty('--focal-y', `${focal.y}%`);
     incomingLayer.classList.add(`mode-${effectiveMode}`);
+
+    if (isGif) {
+      incomingLayer.classList.add('is-gif', 'has-backdrop');
+    }
+    document.body.classList.toggle('active-artwork-is-gif', isGif);
+
+    // Synchronize 32:9 Panoramic Dual-Monitor Span vs Independent Screen Placement
+    if (wallpaper.is_dual_span) {
+      if (STATE.screenIndex === 0 || wallpaper.span_role === 'left') {
+        document.body.classList.add('dual-span-left');
+        document.body.classList.remove('dual-span-right');
+      } else {
+        document.body.classList.add('dual-span-right');
+        document.body.classList.remove('dual-span-left');
+      }
+    } else {
+      document.body.classList.remove('dual-span-left', 'dual-span-right');
+    }
 
     const blurEnabled = STATE.compositionSettings ? STATE.compositionSettings.blurred_backdrop_enabled !== false : true;
     if ((effectiveMode === 'fit' || effectiveMode === 'original') && comp.blurred_background !== false && blurEnabled) {
@@ -1781,6 +1826,15 @@
         DOM.metaOfflineBadge.classList.remove('hidden');
       } else {
         DOM.metaOfflineBadge.classList.add('hidden');
+      }
+    }
+
+    // High-Resolution Animated GIF badge
+    if (DOM.metaGifBadge) {
+      if (isGif) {
+        DOM.metaGifBadge.classList.remove('hidden');
+      } else {
+        DOM.metaGifBadge.classList.add('hidden');
       }
     }
 
@@ -1942,6 +1996,12 @@
       if (isFav) {
         baseDuration += 10.0;
       }
+    }
+
+    // For animated GIFs: loop multiple cycles (12s sweet spot) before smoothly advancing
+    const isGifArt = wallpaper && (wallpaper.is_animated || wallpaper.media_type === 'gif' || (wallpaper.url && wallpaper.url.toLowerCase().includes('.gif')));
+    if (isGifArt && baseDuration > 15 && (!STATE.schedulerFixedSec || STATE.schedulerFixedSec > 15)) {
+      baseDuration = 12.0;
     }
 
     // Enforce bounds: 5s to 600s
@@ -4103,6 +4163,10 @@
         case 'f':
         case 'F':
           DOM.btnFullscreen.click();
+          break;
+        case 'g':
+        case 'G':
+          cycleGifMode();
           break;
         case 'h':
         case 'H':
@@ -7375,6 +7439,163 @@
         });
       });
     }
+  }
+
+  // --- HIGH-RESOLUTION ANIMATED GIF CONTROLLER ---
+  function updateGifModeButtonUI(mode) {
+    if (!DOM.btnGifMode) return;
+    const cleanMode = mode || 'all';
+    if (cleanMode === 'gif') {
+      if (DOM.gifBtnIcon) DOM.gifBtnIcon.textContent = '🎞️';
+      if (DOM.gifBtnLabel) DOM.gifBtnLabel.textContent = 'GIFs ONLY';
+      DOM.btnGifMode.className = 'icon-btn gif-mode-btn gif-mode-active';
+      DOM.btnGifMode.title = 'Current: High-Res Anime GIFs Only! Click to switch to Static Only [Key: G]';
+    } else if (cleanMode === 'static') {
+      if (DOM.gifBtnIcon) DOM.gifBtnIcon.textContent = '🖼️';
+      if (DOM.gifBtnLabel) DOM.gifBtnLabel.textContent = 'Static Only';
+      DOM.btnGifMode.className = 'icon-btn gif-mode-btn gif-mode-static';
+      DOM.btnGifMode.title = 'Current: Static Wallpapers Only. Click to switch to Mix Both [Key: G]';
+    } else {
+      if (DOM.gifBtnIcon) DOM.gifBtnIcon.textContent = '🎨';
+      if (DOM.gifBtnLabel) DOM.gifBtnLabel.textContent = 'GIF: Mix';
+      DOM.btnGifMode.className = 'icon-btn gif-mode-btn';
+      DOM.btnGifMode.title = 'Current: Mix Wallpapers & GIFs. Click to switch to GIFs Only [Key: G]';
+    }
+  }
+
+  async function cycleGifMode() {
+    const currentMode = STATE.gifSettings?.mode || 'all';
+    let newMode = 'all';
+    if (currentMode === 'all') {
+      newMode = 'gif';
+    } else if (currentMode === 'gif') {
+      newMode = 'static';
+    } else {
+      newMode = 'all';
+    }
+
+    STATE.gifSettings = STATE.gifSettings || {};
+    STATE.gifSettings.mode = newMode;
+    STATE.gifSettings.enabled = (newMode !== 'static');
+
+    if (DOM.settingGifMode) DOM.settingGifMode.value = newMode;
+    if (DOM.settingEnableGifs) DOM.settingEnableGifs.checked = (newMode !== 'static');
+    if (DOM.gifSubcontrols) {
+      DOM.gifSubcontrols.style.display = (newMode !== 'static') ? 'block' : 'none';
+    }
+
+    updateGifModeButtonUI(newMode);
+
+    if (newMode === 'gif') {
+      showToast('🎞️ GIF Mode: Streaming High-Res Anime GIFs Only');
+    } else if (newMode === 'static') {
+      showToast('🖼️ Mode: Static Wallpapers Only');
+    } else {
+      showToast('🎨 Mode: Mixed (Wallpapers & Animated GIFs)');
+    }
+
+    try {
+      await backendPost('/api/gif/settings', {
+        enabled: STATE.gifSettings.enabled,
+        mode: newMode,
+        prefer_hd: STATE.gifSettings.prefer_hd ?? true
+      }, true);
+    } catch (e) {
+      console.warn('[GIF] Failed saving gif setting:', e);
+    }
+
+    // Immediately trigger next candidate if switched to GIFs Only
+    if (newMode === 'gif') {
+      STATE.wasExplicitlySkipped = true;
+      displayNextWallpaper();
+    }
+  }
+
+  async function loadGifSettings() {
+    try {
+      const res = await backendFetch('/api/gif/settings');
+      if (res) {
+        STATE.gifSettings = res;
+        if (DOM.settingEnableGifs) DOM.settingEnableGifs.checked = Boolean(res.enabled);
+        if (DOM.settingGifMode) DOM.settingGifMode.value = res.mode || 'all';
+        if (DOM.settingGifHd) DOM.settingGifHd.checked = Boolean(res.prefer_hd);
+        if (DOM.gifSubcontrols) {
+          DOM.gifSubcontrols.style.display = res.enabled ? 'block' : 'none';
+        }
+        updateGifModeButtonUI(res.mode || 'all');
+      }
+    } catch (e) {
+      console.warn('[GIF] Failed to load gif settings:', e);
+    }
+  }
+
+  async function saveGifSettingsBackend() {
+    try {
+      const payload = {
+        enabled: DOM.settingEnableGifs ? DOM.settingEnableGifs.checked : true,
+        mode: DOM.settingGifMode ? DOM.settingGifMode.value : 'all',
+        prefer_hd: DOM.settingGifHd ? DOM.settingGifHd.checked : true
+      };
+      const res = await backendPost('/api/gif/settings', payload, true);
+      if (res) {
+        STATE.gifSettings = res;
+        updateGifModeButtonUI(res.mode || 'all');
+      }
+      showToast('GIF Playback Preferences Saved ✅');
+    } catch (e) {
+      showToast('Failed to save GIF settings ⚠️');
+    }
+  }
+
+  async function initGifSettings() {
+    if (DOM.btnGifMode) {
+      DOM.btnGifMode.addEventListener('click', cycleGifMode);
+    }
+    if (DOM.btnDualScreenToggle) {
+      DOM.btnDualScreenToggle.addEventListener('click', async () => {
+        try {
+          showToast('🖥️² Connecting Monitor 2...');
+          const res = await backendPost('/api/dual/launch', { action: 'toggle' });
+          if (res && res.success) {
+            if (res.status === 'launched') {
+              const mon = res.monitor;
+              const monDesc = mon ? `${mon.name} (${mon.width}×${mon.height})` : 'Monitor 2';
+              showToast(`🖥️² Kuro Extended to ${monDesc}!`);
+            } else if (res.status === 'closed') {
+              showToast('🖥️² Closed Monitor 2 Screen Extension');
+            } else if (res.status === 'already_running') {
+              showToast('🖥️² Monitor 2 screensaver is already running');
+            }
+            return;
+          }
+        } catch (e) {
+          console.warn('[Kuro] Dual screen backend launch fallback:', e);
+        }
+        // Fallback to companion window if backend launcher is unavailable
+        const s1Url = `${window.location.origin}${window.location.pathname}?screen=1&dual=1&dual_mode=span`;
+        window.open(s1Url, 'Kuro_Screen_1', 'left=1920,top=0,width=1920,height=1080');
+        showToast('🖥️² Opening Screen 1 extended window');
+      });
+    }
+    if (DOM.settingEnableGifs) {
+      DOM.settingEnableGifs.addEventListener('change', () => {
+        if (DOM.gifSubcontrols) {
+          DOM.gifSubcontrols.style.display = DOM.settingEnableGifs.checked ? 'block' : 'none';
+        }
+        saveGifSettingsBackend();
+      });
+    }
+    if (DOM.settingGifMode) {
+      DOM.settingGifMode.addEventListener('change', () => {
+        saveGifSettingsBackend();
+      });
+    }
+    if (DOM.settingGifHd) {
+      DOM.settingGifHd.addEventListener('change', () => {
+        saveGifSettingsBackend();
+      });
+    }
+    await loadGifSettings();
   }
 
   // Boot

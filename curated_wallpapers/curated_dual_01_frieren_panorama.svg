@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3840 1080" width="3840" height="1080">
+  <defs>
+    <linearGradient id="dgrad-bg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#030712" />
+      <stop offset="50%" stop-color="#0A192F" />
+      <stop offset="100%" stop-color="#030712" />
+    </linearGradient>
+    <linearGradient id="dgrad-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#C084FC" stop-opacity="0.5" />
+    </linearGradient>
+    <radialGradient id="dgrad-glow-left" cx="25%" cy="50%" r="40%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="dgrad-glow-right" cx="75%" cy="50%" r="40%">
+      <stop offset="0%" stop-color="#C084FC" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#C084FC" stop-opacity="0" />
+    </radialGradient>
+    <filter id="dglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="30" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background spanning both displays -->
+  <rect width="3840" height="1080" fill="url(#dgrad-bg)" />
+  <rect width="1920" height="1080" fill="url(#dgrad-glow-left)" />
+  <rect x="1920" width="1920" height="1080" fill="url(#dgrad-glow-right)" />
+
+  <!-- Continuous Horizon Connection Lines -->
+  <g stroke="#38BDF8" stroke-opacity="0.12" stroke-width="1.5">
+    <line x1="0" y1="540" x2="3840" y2="540" />
+    <line x1="0" y1="620" x2="3840" y2="620" stroke-dasharray="16 16" />
+    <line x1="0" y1="460" x2="3840" y2="460" stroke-dasharray="8 24" />
+  </g>
+
+  <!-- Physical Bezel Center Seam Marker (Subtle guide at x=1920) -->
+  <line x1="1920" y1="0" x2="1920" y2="1080" stroke="#38BDF8" stroke-opacity="0.08" stroke-width="1" stroke-dasharray="4 8" />
+
+  <!-- LEFT MONITOR COMPOSITION (Center: x=960, y=540) -->
+  <g transform="translate(960, 540)" filter="url(#dglow)">
+    <polygon points="0,-180 156,-90 156,90 0,180 -156,90 -156,-90" fill="none" stroke="#38BDF8" stroke-width="4" />
+    <circle cx="0" cy="0" r="80" fill="none" stroke="#FBBF24" stroke-width="2" stroke-dasharray="6 12" />
+    <circle cx="0" cy="0" r="28" fill="#38BDF8" opacity="0.8" />
+  </g>
+  <text x="960" y="260" font-family="'Noto Sans JP', sans-serif" font-size="34" font-weight="900" letter-spacing="12" fill="#38BDF8" text-anchor="middle" filter="url(#dglow)">葬送のフリーレン</text>
+  <text x="960" y="320" font-family="'Inter', sans-serif" font-size="22" font-weight="800" letter-spacing="6" fill="#FFFFFF" text-anchor="middle">FRIEREN · MAGE OF THE HERO PARTY</text>
+  <text x="960" y="780" font-family="'Inter', monospace" font-size="14" fill="#38BDF8" opacity="0.7" letter-spacing="4" text-anchor="middle">[ DISPLAY 1 · LEFT WING ]</text>
+
+  <!-- RIGHT MONITOR COMPOSITION (Center: x=2880, y=540) -->
+  <g transform="translate(2880, 540)" filter="url(#dglow)">
+    <polygon points="0,-180 156,-90 156,90 0,180 -156,90 -156,-90" fill="none" stroke="#C084FC" stroke-width="4" />
+    <circle cx="0" cy="0" r="80" fill="none" stroke="#FBBF24" stroke-width="2" stroke-dasharray="6 12" />
+    <circle cx="0" cy="0" r="28" fill="#C084FC" opacity="0.8" />
+  </g>
+  <text x="2880" y="260" font-family="'Noto Sans JP', sans-serif" font-size="34" font-weight="900" letter-spacing="12" fill="#C084FC" text-anchor="middle" filter="url(#dglow)">魂の眠る地へ</text>
+  <text x="2880" y="320" font-family="'Inter', sans-serif" font-size="22" font-weight="800" letter-spacing="6" fill="#FFFFFF" text-anchor="middle">FERN & STARK · THE NEW DAWN</text>
+  <text x="2880" y="780" font-family="'Inter', monospace" font-size="14" fill="#C084FC" opacity="0.7" letter-spacing="4" text-anchor="middle">[ DISPLAY 2 · RIGHT WING ]</text>
+
+  <!-- Center Quote Spanning Seam -->
+  <text x="1920" y="960" font-family="'Inter', italic" font-size="18" letter-spacing="4" fill="#94A3B8" text-anchor="middle" font-style="italic">"A journey that spanned ten years, yet lives forever across the stars."</text>
+  <text x="1920" y="1000" font-family="'Inter', sans-serif" font-size="14" font-weight="700" letter-spacing="8" fill="#38BDF8" text-anchor="middle" opacity="0.8">KURO // DUAL-MONITOR 32:9 CINEMATIC PANORAMA · 3840×1080</text>
+</svg>

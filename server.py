@@ -46,6 +46,7 @@ from scheduler import SlideshowScheduler
 from soundscape_manager import SoundscapeManager
 from backup_manager import BackupManager
 from performance_tracker import PerformanceTracker
+from download_autosaver import DownloadAutoSaver
 
 PORT = 54321
 HOST = "127.0.0.1"
@@ -92,7 +93,67 @@ soundscape_manager = SoundscapeManager(BASE_DIR / "soundscapes")
 favorites_downloader = FavoritesDownloader(db_manager, FAVORITES_DIR)
 backup_manager = BackupManager(db_manager, BASE_DIR)
 performance_tracker = PerformanceTracker()
+autosaver = DownloadAutoSaver(base_dir=BASE_DIR)
+engine.autosaver = autosaver
 GLOBAL_SHUTDOWN_FUNC = None
+SECONDARY_BROWSER_PROC = None
+
+
+class DualScreenManager:
+    """Coordinates dual-monitor screensaver state, 32:9 panorama span, and synchronized playback."""
+    _lock = threading.Lock()
+    _state: Dict[str, Any] = {
+        "mode": "span",  # "span" | "sync" | "independent"
+        "active_span_wallpaper": None,
+        "screen_wallpapers": {},
+        "last_transition_id": "",
+        "timestamp": 0.0,
+        "bezel_compensation_px": 0
+    }
+
+    @classmethod
+    def get_state(cls) -> Dict[str, Any]:
+        with cls._lock:
+            st = dict(cls._state)
+            st["screen_wallpapers"] = dict(cls._state["screen_wallpapers"])
+            return st
+
+    @classmethod
+    def update_state(cls, updates: Dict[str, Any]) -> Dict[str, Any]:
+        with cls._lock:
+            for k in ["mode", "bezel_compensation_px"]:
+                if k in updates:
+                    cls._state[k] = updates[k]
+            cls._state["timestamp"] = time.time()
+            return dict(cls._state)
+
+    @classmethod
+    def set_active_span_wallpaper(cls, wallpaper: Dict[str, Any]) -> str:
+        with cls._lock:
+            cls._state["active_span_wallpaper"] = wallpaper
+            tid = secrets.token_hex(4)
+            cls._state["last_transition_id"] = tid
+            cls._state["timestamp"] = time.time()
+            return tid
+
+    @classmethod
+    def get_active_span_wallpaper(cls) -> Optional[Dict[str, Any]]:
+        with cls._lock:
+            return cls._state.get("active_span_wallpaper")
+
+    @classmethod
+    def set_screen_wallpaper(cls, screen_id: str, wallpaper: Dict[str, Any]):
+        with cls._lock:
+            cls._state["screen_wallpapers"][str(screen_id)] = {
+                "wallpaper": wallpaper,
+                "timestamp": time.time()
+            }
+
+    @classmethod
+    def get_screen_wallpaper(cls, screen_id: str) -> Optional[Dict[str, Any]]:
+        with cls._lock:
+            entry = cls._state["screen_wallpapers"].get(str(screen_id))
+            return entry.get("wallpaper") if entry else None
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
@@ -252,11 +313,22 @@ class KuroHandler(BaseHTTPRequestHandler):
             raw_anime = query.get("anime", query.get("mood", ["all"]))[0]
             raw_char = query.get("character", [None])[0]
             raw_ratio = query.get("ratio", ["landscape"])[0]
+            raw_screen = query.get("screen", [None])[0]
+            raw_dual_mode = query.get("dual_mode", [None])[0]
+            raw_media_type = query.get("media_type", [None])[0]
 
             # Input validation & sanitization
             anime = SecurityManager.sanitize_string(raw_anime, max_len=64, default="all")
             character = SecurityManager.sanitize_string(raw_char, max_len=64, default="") if raw_char and raw_char != "all" else None
             ratio = SecurityManager.sanitize_string(raw_ratio, max_len=16, default="landscape")
+            screen = SecurityManager.sanitize_string(raw_screen, max_len=16, default="") if raw_screen else None
+            dual_mode = SecurityManager.sanitize_string(raw_dual_mode, max_len=16, default="") if raw_dual_mode else DualScreenManager.get_state().get("mode", "span")
+
+            if raw_media_type:
+                media_type = SecurityManager.sanitize_string(raw_media_type, max_len=16, default="all")
+            else:
+                gif_cfg = db_manager.get_gif_settings()
+                media_type = gif_cfg.get("mode", "all") if gif_cfg.get("enabled", True) else "static"
 
             selected_f = query.get("selected_franchises", [None])[0]
             selected_franchises = [
@@ -276,14 +348,71 @@ class KuroHandler(BaseHTTPRequestHandler):
                 for s in excluded_c.split(",") if SecurityManager.sanitize_string(s, max_len=64)
             ] if excluded_c else None
 
+            # Handle dual-screen span mode synchronization & prevent mirroring
+            s0_wp = DualScreenManager.get_screen_wallpaper("0")
+            s0_id = s0_wp.get("id") if s0_wp else None
+
+            if dual_mode == "span" and screen in ("1", "right", "secondary"):
+                active_span = DualScreenManager.get_active_span_wallpaper()
+                st = DualScreenManager.get_state()
+                if active_span and (time.time() - st.get("timestamp", 0) < 90):
+                    dim_x = active_span.get("dimension_x") or 0
+                    dim_y = active_span.get("dimension_y") or 1
+                    is_true_32_9 = (
+                        active_span.get("is_dual_span") or
+                        active_span.get("aspect_ratio") in ("32:9", "dual", "32x9") or
+                        active_span.get("ratio") == "32:9" or
+                        (dim_x / dim_y >= 2.8)
+                    )
+                    if is_true_32_9:
+                        item = dict(active_span)
+                        item["screen_index"] = 1
+                        item["is_dual_span"] = True
+                        item["span_role"] = "right"
+                        self.send_json_response(item, status=200, origin=origin)
+                        return
+
+            query_ratio = "dual" if (dual_mode == "span" and screen not in ("1", "right", "secondary") and ratio in ("dual", "32:9", "32x9", "dual_screen", "landscape")) else ratio
             item = engine.get_next(
                 anime=anime,
                 character=character,
                 selected_franchises=selected_franchises,
                 excluded_franchises=excluded_franchises,
                 excluded_characters=excluded_characters,
-                ratio=ratio
+                ratio=query_ratio,
+                media_type=media_type
             )
+
+            # Never mirror Screen 0 on Screen 1 if it's not a 32:9 span
+            if screen in ("1", "right", "secondary") and s0_id and item.get("id") == s0_id:
+                item = engine.get_next(
+                    anime=anime,
+                    character=character,
+                    selected_franchises=selected_franchises,
+                    excluded_franchises=excluded_franchises,
+                    excluded_characters=excluded_characters,
+                    ratio="landscape",
+                    media_type=media_type
+                )
+
+            dim_x = item.get("dimension_x") or 0
+            dim_y = item.get("dimension_y") or 1
+            is_dual_span = (query_ratio == "dual" or item.get("aspect_ratio") in ("32:9", "dual", "32x9") or (dim_x / dim_y >= 2.8))
+            if is_dual_span and dual_mode == "span":
+                DualScreenManager.set_active_span_wallpaper(item)
+                item["is_dual_span"] = True
+                item["span_role"] = "left" if screen in ("0", "left", "primary", None) else "right"
+                item["screen_index"] = 0 if screen in ("0", "left", "primary", None) else 1
+            else:
+                item["is_dual_span"] = False
+                item["span_role"] = "single"
+                item["screen_index"] = 1 if screen in ("1", "right", "secondary") else 0
+
+            if screen:
+                DualScreenManager.set_screen_wallpaper(screen, item)
+            else:
+                DualScreenManager.set_screen_wallpaper("0", item)
+
             self.send_json_response(item, status=200, origin=origin)
             return
 
@@ -312,7 +441,7 @@ class KuroHandler(BaseHTTPRequestHandler):
             # 2. Check curated_wallpapers/
             if not found_file:
                 curated_dir = BASE_DIR / "curated_wallpapers"
-                for ext in [".svg", ".jpg", ".jpeg", ".png", ".webp"]:
+                for ext in [".svg", ".jpg", ".jpeg", ".png", ".webp", ".gif"]:
                     c_cand = (curated_dir / f"{img_id}{ext}").resolve()
                     if c_cand.is_file() and c_cand.is_relative_to(BASE_DIR):
                         found_file = c_cand
@@ -321,7 +450,7 @@ class KuroHandler(BaseHTTPRequestHandler):
             # 3. Check .cache/wallpapers/
             if not found_file:
                 cache_dir = BASE_DIR / ".cache" / "wallpapers"
-                for ext in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+                for ext in [".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif"]:
                     c_cand = (cache_dir / f"{img_id}{ext}").resolve()
                     if c_cand.is_file() and c_cand.is_relative_to(BASE_DIR):
                         found_file = c_cand
@@ -330,7 +459,7 @@ class KuroHandler(BaseHTTPRequestHandler):
             # 4. Check favorites/
             if not found_file:
                 fav_dir = BASE_DIR / "favorites"
-                for ext in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+                for ext in [".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif"]:
                     f_cand = (fav_dir / f"{img_id}{ext}").resolve()
                     if f_cand.is_file() and f_cand.is_relative_to(BASE_DIR):
                         found_file = f_cand
@@ -338,7 +467,7 @@ class KuroHandler(BaseHTTPRequestHandler):
 
             if found_file and found_file.is_file():
                 # Disallow unexpected non-image file formats
-                allowed_exts = {".svg", ".jpg", ".jpeg", ".png", ".webp"}
+                allowed_exts = {".svg", ".jpg", ".jpeg", ".png", ".webp", ".gif"}
                 if found_file.suffix.lower() not in allowed_exts:
                     self.send_json_error("FORBIDDEN_FILE_TYPE", "File type not allowed", status=403, origin=origin)
                     return
@@ -405,7 +534,38 @@ class KuroHandler(BaseHTTPRequestHandler):
         # -------------------------------------------------------------
         if path == "/api/monitors":
             monitors = MonitorDetector.get_connected_monitors()
-            self.send_json_response({"monitors": monitors, "count": len(monitors)}, status=200, origin=origin)
+            dual_topo = MonitorDetector.get_dual_monitor_topology()
+            self.send_json_response({
+                "monitors": monitors,
+                "count": len(monitors),
+                "dual_topology": dual_topo
+            }, status=200, origin=origin)
+            return
+
+        # -------------------------------------------------------------
+        # 6b. Dual Screen Synchronization State (/api/dual/state)
+        # -------------------------------------------------------------
+        if path in ["/api/dual/state", "/api/v1/dual/state"]:
+            st = DualScreenManager.get_state()
+            topo = MonitorDetector.get_dual_monitor_topology()
+            self.send_json_response({
+                "dual_state": st,
+                "topology": topo
+            }, status=200, origin=origin)
+            return
+
+        # -------------------------------------------------------------
+        # 6c. Auto-Saved Downloads Status (/api/downloads/status)
+        # -------------------------------------------------------------
+        if path in ["/api/downloads/status", "/api/v1/downloads/status"]:
+            self.send_json_response(autosaver.get_stats(), status=200, origin=origin)
+            return
+
+        # -------------------------------------------------------------
+        # 6d. Animated GIF Playback Settings (/api/gif/settings)
+        # -------------------------------------------------------------
+        if path in ["/api/gif/settings", "/api/v1/gif/settings"]:
+            self.send_json_response(db_manager.get_gif_settings(), status=200, origin=origin)
             return
 
         # -------------------------------------------------------------
@@ -879,6 +1039,122 @@ class KuroHandler(BaseHTTPRequestHandler):
             return
 
         # -------------------------------------------------------------
+        # API: Dual Screen Synchronization (/api/dual/sync & /api/v1/dual/sync)
+        # -------------------------------------------------------------
+        if path in ["/api/dual/sync", "/api/v1/dual/sync"]:
+            mode = payload.get("mode")
+            bezel = payload.get("bezel_compensation_px")
+            active_wp = payload.get("active_wallpaper")
+            screen_id = payload.get("screen")
+            updates = {}
+            if mode in ["span", "sync", "independent"]:
+                updates["mode"] = mode
+            if isinstance(bezel, (int, float)):
+                updates["bezel_compensation_px"] = int(bezel)
+            if active_wp and isinstance(active_wp, dict):
+                tid = DualScreenManager.set_active_span_wallpaper(active_wp)
+                updates["last_transition_id"] = tid
+            if screen_id and active_wp:
+                DualScreenManager.set_screen_wallpaper(str(screen_id), active_wp)
+            new_st = DualScreenManager.update_state(updates)
+            self.send_json_response({"success": True, "dual_state": new_st}, status=200, origin=origin)
+            return
+
+        # -------------------------------------------------------------
+        # API: Dual Screen Extension Launcher (/api/dual/launch & /api/dual/toggle)
+        # -------------------------------------------------------------
+        if path in ["/api/dual/launch", "/api/dual/toggle", "/api/v1/dual/launch", "/api/v1/dual/toggle"]:
+            global SECONDARY_BROWSER_PROC
+            action = "toggle" if "toggle" in path else payload.get("action", "launch")
+
+            is_running = False
+            if SECONDARY_BROWSER_PROC:
+                try:
+                    if SECONDARY_BROWSER_PROC.poll() is None:
+                        is_running = True
+                    else:
+                        SECONDARY_BROWSER_PROC = None
+                except Exception:
+                    SECONDARY_BROWSER_PROC = None
+
+            if is_running and action in ("toggle", "stop", "close"):
+                try:
+                    SECONDARY_BROWSER_PROC.terminate()
+                    SECONDARY_BROWSER_PROC = None
+                except Exception:
+                    pass
+                self.send_json_response({
+                    "success": True,
+                    "status": "closed",
+                    "is_running": False,
+                    "message": "Screen 2 extension closed."
+                }, status=200, origin=origin)
+                return
+
+            if is_running:
+                self.send_json_response({
+                    "success": True,
+                    "status": "already_running",
+                    "is_running": True,
+                    "message": "Screen 2 is already running on secondary monitor."
+                }, status=200, origin=origin)
+                return
+
+            monitors = MonitorDetector.get_monitors_horizontal()
+            dual_topo = MonitorDetector.get_dual_monitor_topology()
+            sec_mon = None
+            if len(monitors) >= 2:
+                sec_mon = monitors[1]
+            elif dual_topo.get("right_monitor"):
+                sec_mon = dual_topo["right_monitor"]
+
+            from launcher import get_browser_executable, load_launcher_config, DEFAULT_CONFIG
+            cfg = load_launcher_config() or DEFAULT_CONFIG
+            browser_exe, _ = get_browser_executable(cfg.get("browser_path"))
+
+            if not browser_exe:
+                self.send_json_error("BROWSER_NOT_FOUND", "No supported Chromium browser found (Chrome, Edge, Brave)", status=500, origin=origin)
+                return
+
+            port = self.server.server_address[1]
+            url = f"http://127.0.0.1:{port}/?screen=1&dual=1&dual_mode=span"
+            prof_dir = BASE_DIR / ".browser_profile_screen_1"
+            prof_dir.mkdir(exist_ok=True)
+
+            m_left = sec_mon["left"] if sec_mon else 1920
+            m_top = sec_mon["top"] if sec_mon else 0
+            m_w = sec_mon["width"] if sec_mon else 1920
+            m_h = sec_mon["height"] if sec_mon else 1080
+
+            args = [
+                browser_exe,
+                f"--app={url}",
+                f"--window-position={m_left},{m_top}",
+                f"--window-size={m_w},{m_h}",
+                f"--user-data-dir={str(prof_dir)}",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-translate",
+                "--disable-infobars",
+                "--start-fullscreen"
+            ]
+
+            try:
+                proc = subprocess.Popen(args, close_fds=True)
+                SECONDARY_BROWSER_PROC = proc
+                self.send_json_response({
+                    "success": True,
+                    "status": "launched",
+                    "is_running": True,
+                    "pid": proc.pid,
+                    "monitor": sec_mon,
+                    "message": f"Extended Kuro to Monitor 2 ({m_w}x{m_h} at {m_left},{m_top})."
+                }, status=200, origin=origin)
+            except Exception as e:
+                self.send_json_error("LAUNCH_FAILED", f"Failed to spawn secondary browser: {e}", status=500, origin=origin)
+            return
+
+        # -------------------------------------------------------------
         # API: Confirm Display (RESERVED -> DISPLAYED)
         # -------------------------------------------------------------
         if path in ["/api/displayed", "/api/confirm-display"]:
@@ -913,6 +1189,55 @@ class KuroHandler(BaseHTTPRequestHandler):
 
             success = engine.report_failed(wallpaper_id=wallpaper_id, token=token, reason=reason)
             self.send_json_response({"success": success, "id": wallpaper_id}, status=200, origin=origin)
+            return
+
+        # -------------------------------------------------------------
+        # API: Auto-Save Downloads Endpoints
+        # -------------------------------------------------------------
+        if path in ["/api/downloads/save-previewed", "/api/v1/downloads/save-previewed"]:
+            wp_data = payload.get("wallpaper") or payload
+            wp_id = wp_data.get("id")
+            if not wp_id or not SecurityManager.validate_id(str(wp_id)):
+                self.send_json_error("INVALID_INPUT", "Invalid wallpaper ID", status=400, origin=origin)
+                return
+            db_wp = db_manager.get_wallpaper_by_id(str(wp_id))
+            if db_wp:
+                merged = dict(db_wp)
+                merged.update({k: v for k, v in wp_data.items() if v})
+                wp_data = merged
+            autosaver.save_wallpaper_async(wp_data)
+            self.send_json_response({"success": True, "id": str(wp_id), "status": "saving"}, status=200, origin=origin)
+            return
+
+        if path in ["/api/downloads/open", "/api/v1/downloads/open"]:
+            ok, msg = autosaver.open_folder()
+            if ok:
+                self.send_json_response({"success": True, "message": msg, "folder": str(autosaver.downloads_dir)}, status=200, origin=origin)
+            else:
+                self.send_json_error("OPEN_FAILED", msg, status=500, origin=origin)
+            return
+
+        if path in ["/api/downloads/settings", "/api/v1/downloads/settings"]:
+            if "enabled" in payload:
+                autosaver.enabled = bool(payload["enabled"])
+            if "downloads_dir" in payload and payload["downloads_dir"]:
+                new_path = SecurityManager.sanitize_string(payload["downloads_dir"], max_len=260)
+                try:
+                    autosaver.downloads_dir = Path(new_path)
+                    autosaver.downloads_dir.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    self.send_json_error("INVALID_PATH", f"Cannot use folder path: {e}", status=400, origin=origin)
+                    return
+            autosaver.save_config()
+            self.send_json_response(autosaver.get_stats(), status=200, origin=origin)
+            return
+
+        if path in ["/api/gif/settings", "/api/v1/gif/settings"]:
+            enabled = payload.get("enabled", True)
+            mode = payload.get("mode", "all")
+            prefer_hd = payload.get("prefer_hd", True)
+            db_manager.save_gif_settings(enabled=bool(enabled), mode=str(mode), prefer_hd=bool(prefer_hd))
+            self.send_json_response(db_manager.get_gif_settings(), status=200, origin=origin)
             return
 
         # -------------------------------------------------------------
@@ -1705,6 +2030,12 @@ def run_server(port=PORT):
     if not server:
         logger.critical(f"Could not bind to any port in range {port}-{port+9}.")
         sys.exit(1)
+
+    # Recover any stale or abandoned reservations so all items are instantly available
+    try:
+        db_manager.recover_abandoned_reservations(timeout_seconds=0.0)
+    except Exception as e:
+        logger.warning(f"Could not clear stale reservations on boot: {e}")
 
     url = f"http://{HOST}:{actual_port}"
     logger.info("=" * 65)

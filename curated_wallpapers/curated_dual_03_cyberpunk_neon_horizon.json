@@ -1,0 +1,21 @@
+{
+  "id": "curated_dual_03_cyberpunk_neon_horizon",
+  "file": "curated_dual_03_cyberpunk_neon_horizon.svg",
+  "anime": "Cyberpunk: Edgerunners",
+  "character": "David & Lucy",
+  "resolution": "3840x1080",
+  "aspect_ratio": "32:9",
+  "is_dual_span": true,
+  "title": "Night City Megastructure to Lunar Sky (32:9 Panoramic)",
+  "theme_color": "#FEE500",
+  "kanji_left": "\u30ca\u30a4\u30c8\u30b7\u30c6\u30a3\u30fb\u96fb\u8133",
+  "kanji_right": "\u6708\u3078\u306e\u7d04\u675f\u30fb\u5922",
+  "subtitle_left": "DAVID MARTINEZ \u00b7 SANDEVISTAN",
+  "subtitle_right": "LUCY KUSHINADA \u00b7 DEEP NET",
+  "quote": "I couldn't wait for you then. But now you're flying to the moon.",
+  "bg1": "#07080C",
+  "bg2": "#1A092A",
+  "accent": "#FEE500",
+  "accent2": "#EC4899",
+  "sub": "#06B6D4"
+}

@@ -102,6 +102,9 @@ class WallpaperEngine:
         # Multi-provider artwork failover manager (Wallhaven, Safebooru, Konachan)
         self.provider_manager = ProviderManager(self.db)
 
+        # Automatic downloads saving manager
+        self.autosaver = None
+
         # Recover any lingering reservations from previous crashes immediately
         self.db.recover_all_reservations_on_startup()
 
@@ -300,11 +303,12 @@ class WallpaperEngine:
         excluded_franchises: Optional[List[str]] = None,
         excluded_characters: Optional[List[str]] = None,
         ratio: str = "landscape",
-        min_resolution: str = "1920x1080"
+        min_resolution: str = "1920x1080",
+        media_type: str = "all"
     ) -> int:
         """
         Executes franchise and character-specific discovery using resilient Multi-Provider failover.
-        Queries Primary (Wallhaven) with automatic fallback to Secondary providers (Safebooru, Konachan)
+        Queries Primary (Wallhaven) with automatic fallback to Secondary providers (Safebooru, Konachan, NekosBest)
         upon rate limits, timeouts, or exhaustion.
         Validates SFW purity, scores technical quality, and commits to SQLite in UNSEEN status.
         """
@@ -313,13 +317,16 @@ class WallpaperEngine:
             franchise = FranchiseRegistry.get_franchise(franchise_slug) if franchise_slug else None
             actual_slug = franchise["slug"] if franchise else "all"
 
-            search_key = self._make_search_key(actual_slug, character_name, ratio)
+            search_key = self._make_search_key(actual_slug, character_name, ratio) + f"_{media_type}"
             if search_key in self.exhausted_keys:
                 return 0
 
             # Check bounded buffer
             stats = self.db.get_stats()
-            if stats.get("unseen_count", 0) >= self.max_unseen_buffer:
+            if media_type == "gif":
+                if stats.get("unseen_gif_count", 0) >= 20:
+                    return 0
+            elif stats.get("unseen_count", 0) >= self.max_unseen_buffer:
                 return 0
 
             current_page = self.page_tracker.get(search_key, 1)
@@ -333,7 +340,8 @@ class WallpaperEngine:
                     page=current_page,
                     quality_scorer=self.quality_scorer,
                     is_known_func=self.db.is_known,
-                    is_blacklisted_func=self.db.is_blacklisted
+                    is_blacklisted_func=self.db.is_blacklisted,
+                    media_type=media_type
                 )
 
                 wh = self.provider_manager.providers.get("wallhaven")
@@ -413,7 +421,8 @@ class WallpaperEngine:
         selected_franchises: Optional[List[str]] = None,
         excluded_franchises: Optional[List[str]] = None,
         excluded_characters: Optional[List[str]] = None,
-        ratio: str = "landscape"
+        ratio: str = "landscape",
+        media_type: str = "all"
     ) -> Dict[str, Any]:
         """
         Transactional 3-Layer Fallback Candidate Retrieval:
@@ -448,6 +457,43 @@ class WallpaperEngine:
         min_quality = q_cfg.get("min_quality_score", 50.0)
 
         # =========================================================================
+        # PRIORITY FOR ANIMATED GIFS: CURATED LOCAL POPULAR ANIME LOOPS (Level 3)
+        # Guarantees instant, zero-buffering playback of all downloaded anime loops
+        # =========================================================================
+        if media_type == "gif":
+            reserved = self._reserve_safe_candidate(
+                anime=target_name,
+                character=character,
+                selected_franchises=selected_franchises,
+                excluded_franchises=excluded_franchises,
+                excluded_characters=excluded_characters,
+                token=token,
+                ratio=ratio,
+                target_level=3,
+                recent_franchises=recent_franchises,
+                apply_personalization=apply_personalization,
+                min_quality=min_quality,
+                media_type=media_type
+            )
+            if not reserved and (target_name != "all" or selected_franchises):
+                # Fall back to any unviewed curated anime loop
+                reserved = self._reserve_safe_candidate(
+                    anime="all",
+                    token=token,
+                    ratio=ratio,
+                    target_level=3,
+                    recent_franchises=recent_franchises,
+                    apply_personalization=apply_personalization,
+                    media_type=media_type
+                )
+            if reserved:
+                self.active_level = 3
+                reserved["active_level"] = 3
+                reserved["source"] = "Curated Offline Anime"
+                reserved["offline"] = not is_connected
+                return reserved
+
+        # =========================================================================
         # LAYER 1: LIVE WALLPAPER STREAM (Level 1)
         # =========================================================================
         if is_connected:
@@ -462,7 +508,8 @@ class WallpaperEngine:
                 target_level=1,
                 recent_franchises=recent_franchises,
                 apply_personalization=apply_personalization,
-                min_quality=min_quality
+                min_quality=min_quality,
+                media_type=media_type
             )
             if reserved:
                 self.active_level = 1
@@ -483,7 +530,8 @@ class WallpaperEngine:
                                 character_name=character,
                                 excluded_franchises=excluded_franchises,
                                 excluded_characters=excluded_characters,
-                                ratio=ratio
+                                ratio=ratio,
+                                media_type=media_type
                             )
                         elif selected_franchises:
                             unexhausted = [f for f in selected_franchises if f not in self.exhausted_keys]
@@ -495,7 +543,8 @@ class WallpaperEngine:
                                         franchise_slug=f_obj["slug"],
                                         excluded_franchises=excluded_franchises,
                                         excluded_characters=excluded_characters,
-                                        ratio=ratio
+                                        ratio=ratio,
+                                        media_type=media_type
                                     )
                         else:
                             all_franchises = FranchiseRegistry.get_all()
@@ -508,7 +557,8 @@ class WallpaperEngine:
                                     franchise_slug=pick["slug"],
                                     excluded_franchises=excluded_franchises,
                                     excluded_characters=excluded_characters,
-                                    ratio=ratio
+                                    ratio=ratio,
+                                    media_type=media_type
                                 )
                     finally:
                         self._discovery_in_progress = False
@@ -534,7 +584,8 @@ class WallpaperEngine:
             target_level=2,
             recent_franchises=recent_franchises,
             apply_personalization=apply_personalization,
-            min_quality=min_quality
+            min_quality=min_quality,
+            media_type=media_type
         )
         if not reserved:
             # Also try any cached item regardless of franchise if specific franchise cache is empty
@@ -545,7 +596,8 @@ class WallpaperEngine:
                 target_level=2,
                 recent_franchises=recent_franchises,
                 apply_personalization=apply_personalization,
-                min_quality=min_quality
+                min_quality=min_quality,
+                media_type=media_type
             )
 
         if reserved:
@@ -571,7 +623,8 @@ class WallpaperEngine:
             target_level=3,
             recent_franchises=recent_franchises,
             apply_personalization=apply_personalization,
-            min_quality=min_quality
+            min_quality=min_quality,
+            media_type=media_type
         )
         if not reserved:
             # Fall back to any unviewed curated artwork
@@ -581,7 +634,8 @@ class WallpaperEngine:
                 ratio=ratio,
                 target_level=3,
                 recent_franchises=recent_franchises,
-                apply_personalization=apply_personalization
+                apply_personalization=apply_personalization,
+                media_type=media_type
             )
 
         if reserved:
@@ -598,9 +652,46 @@ class WallpaperEngine:
         # =========================================================================
         curated_dir = self.db.db_path.parent / "curated_wallpapers"
         if curated_dir.is_dir():
+            import random
+            if media_type == "gif":
+                gif_files = sorted(curated_dir.glob("*.gif"))
+                if gif_files:
+                    pick_gif = random.choice(gif_files)
+                    companion_json = pick_gif.with_suffix(".json")
+                    c_meta = {}
+                    if companion_json.is_file():
+                        try:
+                            with open(companion_json, "r", encoding="utf-8") as jf:
+                                c_meta = json.load(jf)
+                        except Exception:
+                            pass
+                    return {
+                        "id": pick_gif.stem,
+                        "url": f"/api/image/{pick_gif.stem}",
+                        "resolution": c_meta.get("resolution", "1920x1080"),
+                        "aspect_ratio": c_meta.get("aspect_ratio", "16:9"),
+                        "is_dual_span": False,
+                        "anime": c_meta.get("anime", "Curated Animated Anime"),
+                        "character": c_meta.get("character"),
+                        "source": "Curated Offline",
+                        "offline": True,
+                        "active_level": 3,
+                        "safety_rating": "SAFE",
+                        "safety_reason": "procedural_fallback_gif",
+                        "fallback_procedural": True,
+                        "is_animated": True,
+                        "media_type": "gif"
+                    }
+
             svg_files = sorted(curated_dir.glob("*.svg"))
             if svg_files:
                 import random
+                # If dual-screen ratio requested, prioritize 32:9 panoramic curated artworks
+                if ratio in ("dual", "32:9", "32x9", "dual_screen"):
+                    dual_svgs = [f for f in svg_files if "dual" in f.name.lower()]
+                    if dual_svgs:
+                        svg_files = dual_svgs
+
                 pick_svg = random.choice(svg_files)
                 companion_json = pick_svg.with_suffix(".json")
                 c_meta = {}
@@ -610,10 +701,13 @@ class WallpaperEngine:
                             c_meta = json.load(jf)
                     except Exception:
                         pass
+                is_dual_curated = ("dual" in pick_svg.stem or c_meta.get("is_dual_span", False))
                 return {
                     "id": pick_svg.stem,
                     "url": f"/api/image/{pick_svg.stem}",
-                    "resolution": c_meta.get("resolution", "3840x2160"),
+                    "resolution": c_meta.get("resolution", "3840x1080" if is_dual_curated else "3840x2160"),
+                    "aspect_ratio": c_meta.get("aspect_ratio", "32:9" if is_dual_curated else "16:9"),
+                    "is_dual_span": is_dual_curated,
                     "anime": c_meta.get("anime", "Curated Offline Anime"),
                     "character": c_meta.get("character"),
                     "source": "Curated Offline",
@@ -646,7 +740,15 @@ class WallpaperEngine:
 
     def confirm_displayed(self, wallpaper_id: str, token: str) -> bool:
         """Confirms a wallpaper was successfully rendered in the browser."""
-        return self.db.confirm_displayed(wallpaper_id=wallpaper_id, token=token)
+        success = self.db.confirm_displayed(wallpaper_id=wallpaper_id, token=token)
+        if success and getattr(self, "autosaver", None):
+            try:
+                wp = self.db.get_wallpaper_by_id(wallpaper_id)
+                if wp:
+                    self.autosaver.save_wallpaper_async(wp)
+            except Exception as e:
+                logger.warning(f"Auto-save trigger failed for {wallpaper_id}: {e}")
+        return success
 
     def report_failed(self, wallpaper_id: str, token: str, reason: str = "") -> bool:
         """Handles browser image load error."""

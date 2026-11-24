@@ -14,7 +14,9 @@ SUPPORTED_RESOLUTIONS = {
     "3840x2160": {"name": "4K UHD 2160p", "ratio": "16:9", "orientation": "landscape"},
     "3440x1440": {"name": "Ultrawide QHD", "ratio": "21:9", "orientation": "ultrawide"},
     "2560x1080": {"name": "Ultrawide FHD", "ratio": "21:9", "orientation": "ultrawide"},
-    "5120x1440": {"name": "Super Ultrawide", "ratio": "32:9", "orientation": "ultrawide"},
+    "3840x1080": {"name": "Dual Full HD", "ratio": "32:9", "orientation": "dual"},
+    "5120x1440": {"name": "Super Ultrawide Dual QHD", "ratio": "32:9", "orientation": "dual"},
+    "7680x2160": {"name": "Dual 4K UHD", "ratio": "32:9", "orientation": "dual"},
     "1080x1920": {"name": "Portrait Full HD", "ratio": "9:16", "orientation": "portrait"},
     "1440x2560": {"name": "Portrait QHD", "ratio": "9:16", "orientation": "portrait"},
     "2160x3840": {"name": "Portrait 4K", "ratio": "9:16", "orientation": "portrait"},
@@ -24,12 +26,14 @@ SUPPORTED_RESOLUTIONS = {
 class MonitorDetector:
     @staticmethod
     def classify_orientation(width: int, height: int) -> str:
-        """Determines orientation: portrait, ultrawide, or landscape."""
+        """Determines orientation: portrait, ultrawide, dual, or landscape."""
         if height <= 0 or width <= 0:
             return "landscape"
         aspect = width / height
         if height > width:
             return "portrait"
+        elif aspect >= 2.85:
+            return "dual"
         elif aspect >= 2.05:
             return "ultrawide"
         else:
@@ -175,6 +179,83 @@ class MonitorDetector:
             })
 
         return monitors
+
+    @classmethod
+    def get_monitors_horizontal(cls) -> List[Dict[str, Any]]:
+        """Returns connected monitors sorted strictly from left to right by their screen x-coordinate."""
+        monitors = cls.get_connected_monitors()
+        return sorted(monitors, key=lambda m: (m.get("left", 0), m.get("top", 0)))
+
+    @classmethod
+    def get_dual_monitor_topology(cls) -> Dict[str, Any]:
+        """
+        Calculates physical multi-monitor & dual-screen topology.
+        Computes combined virtual desktop dimensions, bounding boxes,
+        and relative position of left and right monitors.
+        """
+        monitors = cls.get_monitors_horizontal()
+        count = len(monitors)
+        is_dual = (count >= 2)
+
+        if not is_dual:
+            single = monitors[0] if monitors else {
+                "width": 1920, "height": 1080, "left": 0, "top": 0, "id": "DISPLAY1"
+            }
+            return {
+                "is_dual": False,
+                "count": count,
+                "monitors": monitors,
+                "primary": single,
+                "left_monitor": single,
+                "right_monitor": None,
+                "combined_width": single["width"],
+                "combined_height": single["height"],
+                "combined_resolution": f"{single['width']}x{single['height']}",
+                "combined_ratio": single.get("ratio", "16:9"),
+                "span_supported": False
+            }
+
+        left_mon = monitors[0]
+        right_mon = monitors[1]
+
+        # Calculate bounding box for combined span
+        min_left = min(m["left"] for m in monitors)
+        max_right = max(m["left"] + m["width"] for m in monitors)
+        min_top = min(m["top"] for m in monitors)
+        max_bottom = max(m["top"] + m["height"] for m in monitors)
+
+        total_width = max_right - min_left
+        max_height = max_bottom - min_top
+        aspect = round(total_width / max(1, max_height), 2)
+        ratio_str = "32:9" if aspect >= 2.85 else cls.get_ratio_name(total_width, max_height)
+
+        return {
+            "is_dual": True,
+            "count": count,
+            "monitors": monitors,
+            "left_monitor": left_mon,
+            "right_monitor": right_mon,
+            "combined_left": min_left,
+            "combined_top": min_top,
+            "combined_width": total_width,
+            "combined_height": max_height,
+            "combined_resolution": f"{total_width}x{max_height}",
+            "combined_ratio": ratio_str,
+            "aspect_float": aspect,
+            "span_supported": True,
+            "left_half_rect": {
+                "x": left_mon["left"],
+                "y": left_mon["top"],
+                "width": left_mon["width"],
+                "height": left_mon["height"]
+            },
+            "right_half_rect": {
+                "x": right_mon["left"],
+                "y": right_mon["top"],
+                "width": right_mon["width"],
+                "height": right_mon["height"]
+            }
+        }
 
     @classmethod
     def get_monitor_by_id(cls, monitor_id: str) -> Optional[Dict[str, Any]]:

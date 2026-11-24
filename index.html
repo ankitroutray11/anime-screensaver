@@ -76,25 +76,34 @@
       </div>
     </div>
 
-    <!-- Mode Selector & Quick Action Bar -->
-    <div class="glass-panel actions-panel">
-      <div class="mode-switcher" id="mode-switcher" title="Switch Display Mode (Key: M)">
-        <button class="mode-pill active" data-mode="ambient" title="Ambient Mode (Key: M)">Ambient</button>
-        <button class="mode-pill" data-mode="cinematic" title="Cinematic Mode (Key: M)">Cinematic</button>
-        <button class="mode-pill" data-mode="dashboard" title="Dashboard Mode (Key: M)">Dashboard</button>
-      </div>
-      
-      <div class="quick-icons">
-        <button id="btn-soundscape-toggle" class="icon-btn" title="Toggle Ambient Soundscape (Key: A)">🔇</button>
-        <button id="btn-quick-info" class="icon-btn" title="Artwork Details & Intelligence (Key: I)">ℹ️</button>
-        <button id="btn-history-open" class="icon-btn" title="Wallpaper History Explorer (Key: Y)">📜</button>
-        <button id="btn-library-open" class="icon-btn" title="Personal Wallpaper Library & Collections (Key: B)">📁</button>
-        <button id="btn-toggle-particles" class="icon-btn" title="Toggle Ambient Particles (Key: C)">✨</button>
-        <button id="btn-toggle-diagnostics" class="icon-btn" title="Performance Diagnostics & Adaptive Rendering (Key: D)">⚡</button>
-        <button id="btn-toggle-hud" class="icon-btn" title="Toggle HUD Overlays (Key: H)">👁️</button>
+    <!-- Essential Quick Actions Bar -->
+    <div class="glass-panel actions-panel" id="actions-panel">
+      <!-- Essential Controls Only -->
+      <div class="quick-icons essential-icons">
+        <button id="btn-gif-mode" class="icon-btn gif-mode-btn" title="Toggle GIF Mode: Mix / GIFs Only / Static Only [Key: G]">
+          <span id="gif-btn-icon">🎞️</span>
+          <span id="gif-btn-label" class="gif-btn-label">GIF: Mix</span>
+        </button>
+        <button id="btn-dual-screen-toggle" class="icon-btn" title="Dual Screen: Extend screensaver to 2nd monitor">🖥️²</button>
+        <button id="btn-fullscreen" class="icon-btn" title="Toggle Fullscreen (Key: F / F11 / Esc)">⛶</button>
         <button id="btn-settings-open" class="icon-btn" title="Screensaver Preferences (Key: S)">⚙️</button>
-        <button id="btn-fullscreen" class="icon-btn" title="Fullscreen (Key: F)">⛶</button>
         <button id="btn-exit-screensaver" class="icon-btn exit-btn" title="Exit Screensaver Cleanly (Ctrl+Q)">⏻</button>
+      </div>
+
+      <!-- Non-essential controls moved out of top bar to keep interface minimal and clean -->
+      <div id="hidden-legacy-actions" style="display: none !important;">
+        <div class="mode-switcher" id="mode-switcher">
+          <button class="mode-pill active" data-mode="ambient">Ambient</button>
+          <button class="mode-pill" data-mode="cinematic">Cinematic</button>
+          <button class="mode-pill" data-mode="dashboard">Dashboard</button>
+        </div>
+        <button id="btn-soundscape-toggle">🔇</button>
+        <button id="btn-quick-info">ℹ️</button>
+        <button id="btn-history-open">📜</button>
+        <button id="btn-library-open">📁</button>
+        <button id="btn-toggle-particles">✨</button>
+        <button id="btn-toggle-diagnostics">⚡</button>
+        <button id="btn-toggle-hud">👁️</button>
       </div>
     </div>
   </aside>
@@ -113,6 +122,7 @@
         <span class="tag-badge badge-purity">✨ Unrepeatable</span>
         <span class="tag-badge badge-palette dashboard-only" id="tag-palette">Dynamic Tint</span>
         <span id="meta-offline-badge" class="tag-badge badge-offline hidden">⚡ Offline Mode</span>
+        <span id="meta-gif-badge" class="tag-badge badge-gif hidden" title="High-Resolution Animated Anime GIF Loop">🎞️ GIF HD</span>
       </div>
 
       <!-- Quick Franchise Switcher Bar (Visible in Ambient/Dashboard) -->
@@ -562,6 +572,38 @@
               </div>
             </div>
 
+            <!-- High-Res Animated GIFs Feature -->
+            <div class="setting-card">
+              <div class="oled-header-row">
+                <div>
+                  <label style="color: #F43F5E; font-weight: 700; font-size: 0.92rem;">🎞️ High-Res Animated Anime GIFs</label>
+                  <p class="oled-subtext">Discover, stream, and play high-resolution animated anime loops alongside static desktop artwork</p>
+                </div>
+                <input type="checkbox" id="setting-enable-gifs" checked title="Enable High-Res Animated Anime GIFs">
+              </div>
+
+              <div id="gif-subcontrols" class="oled-subcontrols" style="margin-top: 0.75rem;">
+                <div class="setting-subgroup">
+                  <span class="range-title" style="font-weight: 600; color: #E2E8F0; margin-bottom: 0.35rem; display: block;">
+                    <span>Media Playback Mode</span>
+                    <span class="tooltip-wrap">
+                      <span class="tooltip-icon">ℹ️</span>
+                      <span class="tooltip-box">Filter slideshow content: cycle between static artwork and animated loops, show static artwork only, or stream animated anime loops exclusively.</span>
+                    </span>
+                  </span>
+                  <select id="setting-gif-mode" class="lib-select" style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem;">
+                    <option value="all">🎨 Mix Both (Static Wallpapers &amp; Animated GIFs)</option>
+                    <option value="static">🖼️ Static Wallpapers Only</option>
+                    <option value="gif">🎞️ Animated GIFs Only</option>
+                  </select>
+                </div>
+                <div class="setting-subgroup" style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: 0.8rem; color: #CBD5E1;">Prefer High-Definition 60fps Loops</span>
+                  <input type="checkbox" id="setting-gif-hd" checked title="Prioritize higher resolution anime GIF loops">
+                </div>
+              </div>
+            </div>
+
             <!-- Franchise Weights & Taste Engine -->
             <div class="personalization-box setting-card">
               <div class="oled-header-row">
@@ -669,6 +711,7 @@
                     <select id="setting-ratio">
                       <option value="auto" selected>Auto Detect (Match Viewport / Physical Ratio)</option>
                       <option value="landscape">Landscape (16:9 / 16:10)</option>
+                      <option value="dual">Dual Screen Super Ultrawide (32:9 · 3840×1080+)</option>
                       <option value="ultrawide">Ultrawide (21:9 / 32:9)</option>
                       <option value="portrait">Portrait (9:16 Pivot)</option>
                       <option value="any">Any Aspect Ratio</option>
@@ -1125,6 +1168,9 @@
                   <label>Target Display (Windows Multi-Monitor)</label>
                   <select id="setting-monitor">
                     <option value="auto">Auto (Match Active Viewport)</option>
+                    <option value="dual_span">Dual Monitors: Panoramic Span (32:9 Split Across Both Screens)</option>
+                    <option value="dual_sync">Dual Monitors: Synchronized Duo (Different Art, Synced Slides)</option>
+                    <option value="dual_independent">Dual Monitors: Independent Slideshows</option>
                   </select>
                 </div>
                 <div class="setting-group">
@@ -1132,10 +1178,43 @@
                   <select id="setting-display-orientation" class="lib-select">
                     <option value="auto" selected>Auto (Follow Physical Orientation)</option>
                     <option value="landscape">Landscape (16:9 / 16:10 Horizontal)</option>
+                    <option value="dual">Dual Screen Super Ultrawide (32:9)</option>
                     <option value="ultrawide">Ultrawide (21:9 / 32:9 Panoramic)</option>
                     <option value="portrait">Portrait (9:16 Pivot / Vertical)</option>
                   </select>
                 </div>
+              </div>
+            </div>
+
+            <!-- Dual Monitor & Span Controls -->
+            <div class="setting-card" id="dual-monitor-config-card">
+              <div class="setting-card-title">
+                <span>Dual Monitor &amp; Panoramic Span</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Controls how wallpapers are coordinated across dual monitors, including 32:9 ultra-wide span mode and physical bezel compensation.</span>
+                </span>
+              </div>
+              <div class="setting-row-split">
+                <div class="setting-group">
+                  <label>Dual Screen Mode</label>
+                  <select id="setting-dual-mode" class="lib-select">
+                    <option value="span" selected>Panoramic Span (Single 32:9 Split Across Screens)</option>
+                    <option value="sync">Synchronized Duo (Separate 16:9 Art, Synced Slides)</option>
+                    <option value="independent">Independent (Separate Queues on Each Display)</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label>Bezel Gap Compensation (<span id="val-bezel-comp">0</span>px)</label>
+                  <input type="range" id="setting-bezel-comp" min="0" max="60" value="0" step="2" class="perf-slider">
+                </div>
+              </div>
+              <div style="margin-top: 0.75rem; display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.25); padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <div>
+                  <span style="font-size: 0.84rem; font-weight: 500; color: #E2E8F0;">Extend to Second Monitor:</span>
+                  <p style="font-size: 0.75rem; color: #94A3B8; margin: 0.2rem 0 0 0;">Opens an extended secondary display window without starting a separate instance.</p>
+                </div>
+                <button id="btn-extend-display" class="primary-btn btn-sm" style="white-space: nowrap;">🖥️ Extend to Monitor 2</button>
               </div>
             </div>
 
@@ -1245,6 +1324,35 @@
                     <input type="range" id="setting-perf-cache-limit" min="500" max="5000" step="250" value="2048">
                     <span id="setting-perf-cache-limit-label">2048 MB (2.0 GB)</span>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Auto-Save Previewed Wallpapers to Downloads -->
+            <div class="setting-card">
+              <div class="setting-card-title">
+                <span>📥 Auto-Save Previewed Wallpapers to Downloads</span>
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">ℹ️</span>
+                  <span class="tooltip-box">Automatically saves every full-resolution wallpaper displayed on screen to your Windows Downloads folder in real-time.</span>
+                </span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <label for="setting-autosave-downloads" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="setting-autosave-downloads" checked style="width: 1.1rem; height: 1.1rem; accent-color: var(--dynamic-accent, #6366f1); cursor: pointer;" />
+                    <span style="font-weight: 500; font-size: 0.88rem; color: #E2E8F0;">Automatically save all displayed wallpapers to Downloads</span>
+                  </label>
+                  <span id="stat-downloads-count-badge" style="font-size: 0.75rem; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; padding: 2px 8px; border-radius: 12px; font-weight: 600;">0 Saved</span>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); font-size: 0.8rem;">
+                  <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
+                    <span style="color: #94A3B8;">Destination: </span>
+                    <strong id="downloads-folder-path" style="color: #F8FAFC; font-family: var(--font-mono, monospace);">C:\Users\ankit\Downloads\Kuro Wallpapers</strong>
+                  </div>
+                  <button id="btn-open-downloads-folder" class="primary-btn btn-sm" style="display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;">
+                    <span>📂 Open Downloads Folder</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1899,6 +2007,7 @@
             </div>
 
             <div class="storage-actions-row">
+              <button id="btn-open-downloads-folder-lib" class="secondary-btn" title="Open Kuro Wallpapers folder in Windows Downloads">📂 Open Downloads Folder</button>
               <button id="btn-purge-cache" class="secondary-btn" title="Free up disk space by clearing cached prefetch images">🧹 Purge Cache Only</button>
               <button id="btn-refresh-storage" class="small-btn">🔄 Refresh Stats</button>
             </div>
@@ -2047,6 +2156,10 @@
             <div class="artinfo-spec-item">
               <span class="artinfo-spec-label">Aspect Ratio</span>
               <span id="artinfo-val-ratio" class="artinfo-spec-val">--</span>
+            </div>
+            <div class="artinfo-spec-item" id="artinfo-dual-spec-row" style="display: none;">
+              <span class="artinfo-spec-label">Display Mode</span>
+              <span id="artinfo-val-dual-mode" class="dual-monitor-badge">Dual Screen 32:9</span>
             </div>
             <div class="artinfo-spec-item">
               <span class="artinfo-spec-label">File Size</span>

@@ -57,6 +57,8 @@ class NormalizedWallpaper:
     safety_rating: str = "SAFE"
     safety_reason: str = "verified_sfw"
     provider_purity_raw: Optional[str] = None
+    media_type: str = "static"      # "static" or "gif"
+    is_animated: bool = False       # True for high-res animated loops
 
     def to_candidate_dict(self) -> Dict[str, Any]:
         """Converts normalized wallpaper to Kuro database candidate format."""
@@ -70,6 +72,7 @@ class NormalizedWallpaper:
             "source": self.provider,
             "dimension_x": self.dimension_x,
             "dimension_y": self.dimension_y,
+            "aspect_ratio": self.aspect_ratio,
             "file_size": self.file_size,
             "views": self.views,
             "favorites": self.favorites,
@@ -81,7 +84,9 @@ class NormalizedWallpaper:
             "query_strategy": self.query_strategy,
             "safety_rating": self.safety_rating,
             "safety_reason": self.safety_reason,
-            "provider_purity_raw": self.provider_purity_raw
+            "provider_purity_raw": self.provider_purity_raw,
+            "media_type": self.media_type,
+            "is_animated": 1 if self.is_animated else 0
         }
 
 
@@ -316,7 +321,8 @@ class ArtworkProvider:
         ratio: str = "landscape",
         min_resolution: str = "1920x1080",
         page: int = 1,
-        limit: int = 24
+        limit: int = 24,
+        media_type: str = "all"
     ) -> List[NormalizedWallpaper]:
         """Must be implemented by subclasses. Returns a list of NormalizedWallpaper."""
         raise NotImplementedError("Subclasses must implement search()")
@@ -433,9 +439,14 @@ class WallhavenProvider(ArtworkProvider):
         ratio: str = "landscape",
         min_resolution: str = "1920x1080",
         page: int = 1,
-        limit: int = 24
+        limit: int = 24,
+        media_type: str = "all"
     ) -> List[NormalizedWallpaper]:
         from franchise_registry import FranchiseRegistry
+
+        if media_type == "gif":
+            # Wallhaven specializes in high-resolution static desktop artwork
+            return []
 
         if not self.circuit_breaker.can_execute():
             raise RuntimeError(f"Circuit breaker for {self.name} is OPEN.")
@@ -612,7 +623,7 @@ class WallhavenProvider(ArtworkProvider):
                     resolution=item.get("resolution", f"{dim_x}x{dim_y}"),
                     dimension_x=dim_x,
                     dimension_y=dim_y,
-                    aspect_ratio=ratio,
+                    aspect_ratio="32:9" if (dim_x and dim_y and (dim_x / max(1, dim_y)) >= 2.85) else ratio,
                     file_size=file_size,
                     anime=anime_title,
                     character=character_name,
@@ -661,8 +672,17 @@ class SafebooruProvider(ArtworkProvider):
             enabled=enabled
         )
 
-    def _translate_tags(self, franchise_slug: Optional[str], character_name: Optional[str], ratio: str) -> str:
+    def _translate_tags(
+        self,
+        franchise_slug: Optional[str],
+        character_name: Optional[str],
+        ratio: str,
+        media_type: str = "all"
+    ) -> str:
         tags: List[str] = ["-rating:questionable", "-rating:explicit"]
+
+        if media_type == "gif" or ratio == "gif":
+            tags.append("animated")
 
         if franchise_slug and franchise_slug in FRANCHISE_BOORU_TAGS:
             booru_tag = FRANCHISE_BOORU_TAGS[franchise_slug][0]
@@ -670,7 +690,7 @@ class SafebooruProvider(ArtworkProvider):
         elif franchise_slug and franchise_slug != "all":
             clean_f = re.sub(r"[^a-zA-Z0-9]+", "_", franchise_slug.lower()).strip("_")
             tags.append(clean_f)
-        else:
+        elif media_type != "gif" and ratio != "gif":
             # General high-quality scenic anime
             tags.append("scenery")
 
@@ -678,8 +698,13 @@ class SafebooruProvider(ArtworkProvider):
             clean_c = re.sub(r"[^a-zA-Z0-9]+", "_", character_name.lower()).strip("_")
             tags.append(clean_c)
 
-        if ratio == "landscape":
+        if media_type == "gif" or ratio == "gif":
+            tags.append("width:>=800")
+        elif ratio == "landscape":
             tags.append("width:>=1920")
+        elif ratio in ("dual", "32:9", "32x9", "dual_screen"):
+            tags.append("width:>=3840")
+            tags.append("wide_shot")
         elif ratio == "ultrawide":
             tags.append("width:>=2560")
         elif ratio == "portrait":
@@ -694,7 +719,8 @@ class SafebooruProvider(ArtworkProvider):
         ratio: str = "landscape",
         min_resolution: str = "1920x1080",
         page: int = 1,
-        limit: int = 24
+        limit: int = 24,
+        media_type: str = "all"
     ) -> List[NormalizedWallpaper]:
         if not self.circuit_breaker.can_execute():
             raise RuntimeError(f"Circuit breaker for {self.name} is OPEN.")
@@ -702,7 +728,7 @@ class SafebooruProvider(ArtworkProvider):
         self._throttle()
         t0 = time.perf_counter()
 
-        query_tags = self._translate_tags(franchise_slug, character_name, ratio)
+        query_tags = self._translate_tags(franchise_slug, character_name, ratio, media_type=media_type)
         params = {
             "page": "dapi",
             "s": "post",
@@ -762,12 +788,24 @@ class SafebooruProvider(ArtworkProvider):
                 if preview_url.startswith("//"):
                     preview_url = "https:" + preview_url
 
-                dim_x = int(item.get("width", 0))
-                dim_y = int(item.get("height", 0))
+                dim_x = int(item.get("width") or 0)
+                dim_y = int(item.get("height") or 0)
+
+                tags_str = item.get("tags", "")
+                tag_list = tags_str.split() if isinstance(tags_str, str) else []
+                is_gif = (file_url and file_url.lower().endswith(".gif")) or ("animated" in tag_list)
 
                 # Ratio & resolution check
-                if ratio == "landscape":
+                if media_type == "gif" or ratio == "gif":
+                    if not is_gif:
+                        continue
+                    if dim_x < 480 or dim_y < 270:
+                        continue
+                elif ratio == "landscape":
                     if dim_x < 1920 or dim_x <= dim_y:
+                        continue
+                elif ratio in ("dual", "32:9", "32x9", "dual_screen"):
+                    if dim_x < 2560 or (dim_x / max(1, dim_y)) < 2.8:
                         continue
                 elif ratio == "ultrawide":
                     if dim_x < 2560 or (dim_x / max(1, dim_y)) < 1.95:
@@ -776,9 +814,7 @@ class SafebooruProvider(ArtworkProvider):
                     if dim_y < 1080 or dim_y <= dim_x:
                         continue
 
-                tags_str = item.get("tags", "")
-                tag_list = tags_str.split() if isinstance(tags_str, str) else []
-                score = int(item.get("score", 0))
+                score = int(item.get("score") or 0)
                 owner = item.get("owner")
                 source_url = f"https://safebooru.org/index.php?page=post&s=view&id={raw_id}"
 
@@ -790,7 +826,7 @@ class SafebooruProvider(ArtworkProvider):
                     resolution=f"{dim_x}x{dim_y}",
                     dimension_x=dim_x,
                     dimension_y=dim_y,
-                    aspect_ratio=ratio,
+                    aspect_ratio="32:9" if (dim_x and dim_y and (dim_x / max(1, dim_y)) >= 2.85) else ratio,
                     file_size=0,
                     anime=anime_title,
                     character=character_name,
@@ -802,7 +838,9 @@ class SafebooruProvider(ArtworkProvider):
                     upload_date=None,
                     source_url=source_url,
                     query_strategy="booru_failover",
-                    provider_purity_raw=str(item.get("rating", "g"))
+                    provider_purity_raw=str(item.get("rating", "g")),
+                    media_type="gif" if is_gif else "static",
+                    is_animated=is_gif
                 ))
 
             return results
@@ -845,8 +883,11 @@ class KonachanProvider(ArtworkProvider):
             enabled=enabled
         )
 
-    def _translate_tags(self, franchise_slug: Optional[str], character_name: Optional[str]) -> str:
+    def _translate_tags(self, franchise_slug: Optional[str], character_name: Optional[str], media_type: str = "all") -> str:
         tags: List[str] = ["rating:s"]
+
+        if media_type == "gif":
+            tags.append("animated")
 
         if franchise_slug and franchise_slug in FRANCHISE_BOORU_TAGS:
             booru_tag = FRANCHISE_BOORU_TAGS[franchise_slug][0]
@@ -854,7 +895,7 @@ class KonachanProvider(ArtworkProvider):
         elif franchise_slug and franchise_slug != "all":
             clean_f = re.sub(r"[^a-zA-Z0-9]+", "_", franchise_slug.lower()).strip("_")
             tags.append(clean_f)
-        else:
+        elif media_type != "gif":
             tags.append("landscape")
 
         if character_name and character_name.lower() != "all":
@@ -870,7 +911,8 @@ class KonachanProvider(ArtworkProvider):
         ratio: str = "landscape",
         min_resolution: str = "1920x1080",
         page: int = 1,
-        limit: int = 24
+        limit: int = 24,
+        media_type: str = "all"
     ) -> List[NormalizedWallpaper]:
         if not self.circuit_breaker.can_execute():
             raise RuntimeError(f"Circuit breaker for {self.name} is OPEN.")
@@ -878,7 +920,7 @@ class KonachanProvider(ArtworkProvider):
         self._throttle()
         t0 = time.perf_counter()
 
-        query_tags = self._translate_tags(franchise_slug, character_name)
+        query_tags = self._translate_tags(franchise_slug, character_name, media_type=media_type)
         params = {
             "page": str(page),
             "limit": str(limit),
@@ -929,12 +971,24 @@ class KonachanProvider(ArtworkProvider):
                 if preview_url.startswith("//"):
                     preview_url = "https:" + preview_url
 
-                dim_x = int(item.get("width", 0))
-                dim_y = int(item.get("height", 0))
+                dim_x = int(item.get("width") or 0)
+                dim_y = int(item.get("height") or 0)
+
+                tags_str = item.get("tags", "")
+                tag_list = tags_str.split() if isinstance(tags_str, str) else []
+                is_gif = (file_url and file_url.lower().endswith(".gif")) or ("animated" in tag_list)
 
                 # Ratio & resolution check
-                if ratio == "landscape":
+                if media_type == "gif" or ratio == "gif":
+                    if not is_gif:
+                        continue
+                    if dim_x < 480 or dim_y < 270:
+                        continue
+                elif ratio == "landscape":
                     if dim_x < 1920 or dim_x <= dim_y:
+                        continue
+                elif ratio in ("dual", "32:9", "32x9", "dual_screen"):
+                    if dim_x < 2560 or (dim_x / max(1, dim_y)) < 2.8:
                         continue
                 elif ratio == "ultrawide":
                     if dim_x < 2560 or (dim_x / max(1, dim_y)) < 1.95:
@@ -943,12 +997,10 @@ class KonachanProvider(ArtworkProvider):
                     if dim_y < 1080 or dim_y <= dim_x:
                         continue
 
-                tags_str = item.get("tags", "")
-                tag_list = tags_str.split() if isinstance(tags_str, str) else []
-                score = int(item.get("score", 0))
+                score = int(item.get("score") or 0)
                 author = item.get("author")
                 created_at = item.get("created_at")
-                file_size = int(item.get("file_size", 0))
+                file_size = int(item.get("file_size") or 0)
                 source_url = f"https://konachan.net/post/show/{raw_id}"
 
                 results.append(NormalizedWallpaper(
@@ -959,7 +1011,7 @@ class KonachanProvider(ArtworkProvider):
                     resolution=f"{dim_x}x{dim_y}",
                     dimension_x=dim_x,
                     dimension_y=dim_y,
-                    aspect_ratio=ratio,
+                    aspect_ratio="32:9" if (dim_x and dim_y and (dim_x / max(1, dim_y)) >= 2.85) else ratio,
                     file_size=file_size,
                     anime=anime_title,
                     character=character_name,
@@ -971,11 +1023,139 @@ class KonachanProvider(ArtworkProvider):
                     upload_date=str(created_at) if created_at else None,
                     source_url=source_url,
                     query_strategy="booru_failover",
-                    provider_purity_raw=str(item.get("rating", "g"))
+                    provider_purity_raw=str(item.get("rating", "g")),
+                    media_type="gif" if is_gif else "static",
+                    is_animated=is_gif
                 ))
 
             return results
 
+        except urllib.error.HTTPError as he:
+            duration_ms = (time.perf_counter() - t0) * 1000.0
+            is_429 = (he.code == 429)
+            self.circuit_breaker.record_failure(is_rate_limit=is_429)
+            self.health_tracker.record_request(
+                duration_ms, success=False, is_rate_limit=is_429, error_msg=f"HTTP {he.code}: {he.reason}"
+            )
+            logger.warning(f"[{self.name}] HTTP error {he.code}: {he.reason}")
+            raise
+        except Exception as ex:
+            duration_ms = (time.perf_counter() - t0) * 1000.0
+            self.circuit_breaker.record_failure(is_rate_limit=False)
+            self.health_tracker.record_request(duration_ms, success=False, error_msg=str(ex))
+            logger.warning(f"[{self.name}] Request failed: {ex}")
+            raise
+
+
+# ---------------------------------------------------------------------------
+# 8b. nekos.best Provider (High-Resolution Animated GIFs)
+# ---------------------------------------------------------------------------
+
+class NekosBestGifProvider(ArtworkProvider):
+    """
+    Dedicated high-resolution animated anime GIF provider querying nekos.best API v2.
+    Returns 100% SFW anime loops with authentic anime series attribution.
+    """
+    ANIMATED_CATEGORIES = [
+        "dance", "smile", "wave", "laugh", "sleep", "nod", "thumbsup",
+        "stare", "wink", "happy", "think", "cheer", "blush", "bored",
+        "peck", "handhold", "pout", "yawn", "highfive", "lurk"
+    ]
+
+    def __init__(self, priority: int = 4, enabled: bool = True):
+        super().__init__(
+            name="NekosBest",
+            display_name="nekos.best (Animated GIFs)",
+            priority=priority,
+            min_request_interval=1.0,
+            timeout=8.0,
+            enabled=enabled
+        )
+
+    def search(
+        self,
+        franchise_slug: Optional[str] = None,
+        character_name: Optional[str] = None,
+        ratio: str = "landscape",
+        min_resolution: str = "1920x1080",
+        page: int = 1,
+        limit: int = 20,
+        media_type: str = "all",
+        category: Optional[str] = None
+    ) -> List[NormalizedWallpaper]:
+        if not self.circuit_breaker.can_execute():
+            raise RuntimeError(f"Circuit breaker for {self.name} is OPEN.")
+
+        self._throttle()
+        t0 = time.perf_counter()
+
+        chosen_cat = category if (category and category in self.ANIMATED_CATEGORIES) else None
+        if not chosen_cat:
+            cat_idx = max(0, page - 1) % len(self.ANIMATED_CATEGORIES)
+            chosen_cat = self.ANIMATED_CATEGORIES[cat_idx]
+
+        url = f"https://nekos.best/api/v2/{chosen_cat}?amount={min(limit, 20)}"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) KuroScreensaver/3.5"}
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                raw_bytes = resp.read()
+                data = json.loads(raw_bytes.decode("utf-8")) if raw_bytes else {}
+                duration_ms = (time.perf_counter() - t0) * 1000.0
+                self.circuit_breaker.record_success()
+                self.health_tracker.record_request(duration_ms, success=True)
+
+            items = data.get("results", [])
+            if not isinstance(items, list):
+                return []
+
+            results: List[NormalizedWallpaper] = []
+            for item in items:
+                gif_url = item.get("url")
+                if not gif_url or not gif_url.lower().endswith(".gif"):
+                    continue
+
+                slug_part = gif_url.split("/")[-1].replace(".gif", "")
+                img_id = f"nb_{slug_part[:24]}"
+
+                dims = item.get("dimensions", {})
+                dim_x = int(dims.get("width") or 800)
+                dim_y = int(dims.get("height") or 450)
+
+                anime_title = item.get("anime_name") or "Anime Animation"
+                source_url = item.get("source_url") or gif_url
+
+                results.append(NormalizedWallpaper(
+                    id=img_id,
+                    provider=self.name,
+                    url=gif_url,
+                    thumbnail_url=gif_url,
+                    resolution=f"{dim_x}x{dim_y}",
+                    dimension_x=dim_x,
+                    dimension_y=dim_y,
+                    aspect_ratio="landscape" if dim_x >= dim_y else "portrait",
+                    file_size=0,
+                    anime=anime_title,
+                    character=character_name,
+                    tags=["animated", "gif", chosen_cat, "sfw"],
+                    purity="sfw",
+                    views=150,
+                    favorites=25,
+                    uploader="nekos.best",
+                    upload_date=None,
+                    source_url=source_url,
+                    query_strategy="nekos_best_gif",
+                    safety_rating="SAFE",
+                    safety_reason="verified_sfw",
+                    provider_purity_raw="sfw",
+                    media_type="gif",
+                    is_animated=True
+                ))
+
+            return results
         except urllib.error.HTTPError as he:
             duration_ms = (time.perf_counter() - t0) * 1000.0
             is_429 = (he.code == 429)
@@ -1000,7 +1180,7 @@ class KonachanProvider(ArtworkProvider):
 class ProviderManager:
     """
     Coordinates multi-provider failover, health tracking, and circuit breaker states.
-    Automatically transitions from Primary (Wallhaven) to Secondary (Safebooru / Konachan)
+    Automatically transitions from Primary (Wallhaven) to Secondary (Safebooru / Konachan / NekosBest)
     on rate limit, timeout, or exhaustion.
     """
 
@@ -1009,7 +1189,8 @@ class ProviderManager:
         self.providers: Dict[str, ArtworkProvider] = {
             "wallhaven": WallhavenProvider(priority=1, enabled=True),
             "safebooru": SafebooruProvider(priority=2, enabled=True),
-            "konachan": KonachanProvider(priority=3, enabled=True)
+            "konachan": KonachanProvider(priority=3, enabled=True),
+            "nekos_best": NekosBestGifProvider(priority=4, enabled=True)
         }
         self.active_provider_name: str = "Wallhaven"
         self.total_failovers: int = 0
@@ -1031,6 +1212,8 @@ class ProviderManager:
                     self.providers["safebooru"].enabled = bool(settings["safebooru_enabled"])
                 if "konachan_enabled" in settings:
                     self.providers["konachan"].enabled = bool(settings["konachan_enabled"])
+                if "nekos_best_enabled" in settings:
+                    self.providers["nekos_best"].enabled = bool(settings["nekos_best_enabled"])
         except Exception as e:
             logger.warning(f"Could not load provider settings: {e}")
 
@@ -1049,7 +1232,8 @@ class ProviderManager:
         page: int = 1,
         quality_scorer: Optional[Any] = None,
         is_known_func: Optional[Callable[[str], bool]] = None,
-        is_blacklisted_func: Optional[Callable[[str], bool]] = None
+        is_blacklisted_func: Optional[Callable[[str], bool]] = None,
+        media_type: str = "all"
     ) -> Tuple[List[Dict[str, Any]], str]:
         """
         Attempts retrieval across configured providers in priority order.
@@ -1060,6 +1244,12 @@ class ProviderManager:
         if not ordered_providers:
             logger.warning("[ProviderManager] All artwork providers are disabled.")
             return [], "None"
+
+        # If GIFs are specifically requested, reorder to providers with animated GIF support
+        if media_type == "gif":
+            gif_providers = [p for p in ordered_providers if isinstance(p, (SafebooruProvider, KonachanProvider, NekosBestGifProvider))]
+            if gif_providers:
+                ordered_providers = gif_providers
 
         primary = ordered_providers[0]
 
@@ -1083,7 +1273,8 @@ class ProviderManager:
                     character_name=character_name,
                     ratio=ratio,
                     min_resolution=min_resolution,
-                    page=page
+                    page=page,
+                    media_type=media_type
                 )
 
                 if not wallpapers:

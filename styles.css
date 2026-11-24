@@ -82,6 +82,99 @@ html, body {
   transition: opacity var(--transition-duration, 2.5s) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* High-Resolution GIF Display & Visual Clarity Optimization */
+.wallpaper-layer.is-gif {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.wallpaper-layer.is-gif .wallpaper-foreground {
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.wallpaper-layer.is-gif .wallpaper-backdrop {
+  opacity: 0.85 !important;
+  filter: blur(36px) brightness(0.4) saturate(1.2) !important;
+}
+
+body.active-artwork-is-gif .vignette-overlay {
+  opacity: 0.3 !important;
+  transition: opacity 0.5s ease;
+}
+
+body.active-artwork-is-gif .hud-gradient-scrim {
+  opacity: 0.35 !important;
+  transition: opacity 0.5s ease;
+}
+
+/* Screen Extension Presentation for Screen 1 (Monitor 2) */
+body.screen-extension #hud-top-right .actions-panel {
+  display: none !important;
+}
+
+body.screen-extension #hud-top-right::after {
+  content: 'MONITOR 2 // EXTENDED';
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(15, 23, 42, 0.65);
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+/* ==========================================================================
+   DUAL-MONITOR PANORAMIC SPAN MODE (32:9 Super Ultrawide Split Across Displays)
+   ========================================================================== */
+body.dual-span-left .wallpaper-layer {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-position: calc(0% - var(--bezel-comp, 0px)) center !important;
+  background-size: calc(200% + var(--bezel-comp, 0px) * 2) 100% !important;
+  background-repeat: no-repeat !important;
+  transform: translate3d(var(--oled-wp-shift-x, 0px), var(--oled-wp-shift-y, 0px), 0) !important;
+}
+
+body.dual-span-right .wallpaper-layer {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-position: calc(100% + var(--bezel-comp, 0px)) center !important;
+  background-size: calc(200% + var(--bezel-comp, 0px) * 2) 100% !important;
+  background-repeat: no-repeat !important;
+  transform: translate3d(var(--oled-wp-shift-x, 0px), var(--oled-wp-shift-y, 0px), 0) !important;
+}
+
+body.dual-span-left .wallpaper-backdrop,
+body.dual-span-right .wallpaper-backdrop {
+  display: none !important;
+}
+
+.dual-monitor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #c084fc;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .wallpaper-layer.active {
   opacity: 1;
   z-index: 2;
@@ -540,6 +633,46 @@ body.display-mode-dashboard #clock-seconds.hide-seconds {
   transform: scale(1.08);
 }
 
+/* Essential GIF Mode Button in Top Bar */
+.gif-mode-btn {
+  width: auto !important;
+  min-width: 5.6rem !important;
+  padding: 0 0.75rem !important;
+  border-radius: 9999px !important;
+  gap: 0.35rem;
+  background: rgba(244, 63, 94, 0.12) !important;
+  border: 1px solid rgba(244, 63, 94, 0.45) !important;
+  color: #FDA4AF !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em;
+}
+
+.gif-mode-btn:hover {
+  background: rgba(244, 63, 94, 0.25) !important;
+  border-color: rgba(244, 63, 94, 0.85) !important;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
+  transform: translateY(-1px) scale(1.03) !important;
+}
+
+.gif-mode-btn.gif-mode-active {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.45), rgba(168, 85, 247, 0.45)) !important;
+  border-color: #F43F5E !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 14px rgba(244, 63, 94, 0.75);
+  animation: pulse-gif-glow 2.5s infinite ease-in-out;
+}
+
+.gif-mode-btn.gif-mode-static {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #94A3B8 !important;
+}
+
+.gif-btn-label {
+  white-space: nowrap;
+}
+
 .icon-btn.exit-btn {
   color: #F87171;
 }
@@ -549,6 +682,14 @@ body.display-mode-dashboard #clock-seconds.hide-seconds {
   border-color: rgba(239, 68, 68, 0.5);
   color: #FCA5A5;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+.icon-btn.active,
+#btn-dual-screen-toggle.active {
+  background: rgba(99, 102, 241, 0.35);
+  border-color: rgba(99, 102, 241, 0.7);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
 }
 
 /* --- ZONE 3: BOTTOM-LEFT (Artwork Metadata & Franchise) --- */
@@ -767,6 +908,27 @@ body.display-mode-dashboard #clock-seconds.hide-seconds {
   background: rgba(245, 158, 11, 0.15) !important;
   border-color: rgba(245, 158, 11, 0.4) !important;
   color: #FBBF24 !important;
+}
+
+.badge-gif {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.25), rgba(168, 85, 247, 0.25)) !important;
+  border-color: rgba(244, 63, 94, 0.6) !important;
+  color: #FDA4AF !important;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.35);
+  animation: pulse-gif-glow 2.5s infinite ease-in-out;
+}
+
+@keyframes pulse-gif-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(244, 63, 94, 0.3);
+    border-color: rgba(244, 63, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(244, 63, 94, 0.75);
+    border-color: rgba(244, 63, 94, 0.9);
+  }
 }
 
 @keyframes offline-pulse {

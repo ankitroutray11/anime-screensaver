@@ -1,4 +1,5 @@
 .browser_profile/
+.browser_profile_screen_*/
 .cache/
 backups/
 __pycache__/
@@ -9,5 +10,7 @@ __pycache__/
 *.db
 *.db*
 *.backup
+*.lnk
+*.gif
 launcher_config.json.backup
 test_wt.*

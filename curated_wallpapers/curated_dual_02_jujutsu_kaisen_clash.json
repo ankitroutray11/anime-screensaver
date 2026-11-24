@@ -1,0 +1,21 @@
+{
+  "id": "curated_dual_02_jujutsu_kaisen_clash",
+  "file": "curated_dual_02_jujutsu_kaisen_clash.svg",
+  "anime": "Jujutsu Kaisen",
+  "character": "Gojo & Sukuna",
+  "resolution": "3840x1080",
+  "aspect_ratio": "32:9",
+  "is_dual_span": true,
+  "title": "Duality of Infinity: Void & Shrine (32:9 Panoramic)",
+  "theme_color": "#00F0FF",
+  "kanji_left": "\u7121\u91cf\u7a7a\u51e6\u30fb\u516d\u773c",
+  "kanji_right": "\u4f0f\u9b54\u5fa1\u5eda\u5b50\u30fb\u546a\u3044\u306e\u738b",
+  "subtitle_left": "SATORU GOJO \u00b7 UNLIMITED VOID",
+  "subtitle_right": "RYOMEN SUKUNA \u00b7 MALEVOLENT SHRINE",
+  "quote": "Throughout Heaven and Earth, two monsters shape the boundary of jujutsu.",
+  "bg1": "#05020A",
+  "bg2": "#1E0824",
+  "accent": "#00F0FF",
+  "accent2": "#EF4444",
+  "sub": "#A855F7"
+}

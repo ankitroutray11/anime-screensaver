@@ -1,0 +1,21 @@
+{
+  "id": "curated_dual_01_frieren_panorama",
+  "file": "curated_dual_01_frieren_panorama.svg",
+  "anime": "Frieren",
+  "character": "Frieren & Fern",
+  "resolution": "3840x1080",
+  "aspect_ratio": "32:9",
+  "is_dual_span": true,
+  "title": "Beyond Journey's End: Celestial Horizon (32:9 Panoramic)",
+  "theme_color": "#38BDF8",
+  "kanji_left": "\u846c\u9001\u306e\u30d5\u30ea\u30fc\u30ec\u30f3",
+  "kanji_right": "\u9b42\u306e\u7720\u308b\u5730\u3078",
+  "subtitle_left": "FRIEREN \u00b7 MAGE OF THE HERO PARTY",
+  "subtitle_right": "FERN & STARK \u00b7 THE NEW DAWN",
+  "quote": "A journey that spanned ten years, yet lives forever across the stars.",
+  "bg1": "#030712",
+  "bg2": "#0A192F",
+  "accent": "#38BDF8",
+  "accent2": "#C084FC",
+  "sub": "#FBBF24"
+}

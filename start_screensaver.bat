@@ -22,6 +22,12 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 :: 2. Handle CLI Commands
+if /i "%~1"=="--dual" (
+    echo Starting Kuro Anime Screensaver across Dual Monitors...
+    python launcher.py start --dual
+    exit /b %ERRORLEVEL%
+)
+
 if /i "%~1"=="--pin" (
     echo Pinning Kuro Anime Screensaver to Windows Start ^& Desktop...
     python launcher.py pin

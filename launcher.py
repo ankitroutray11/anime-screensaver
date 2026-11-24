@@ -38,9 +38,10 @@ LOG_FILE = BASE_DIR / "kuro_server.log"
 DEFAULT_PORT = 54321
 
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "mode": "kiosk",               # "kiosk" | "windowed" | "fullscreen"
+    "mode": "kiosk",               # "kiosk" | "windowed" | "fullscreen" | "span_window"
     "browser_path": "auto",        # "auto" or absolute executable path
-    "target_monitor": "auto",      # "auto" | "primary" | "secondary" | "DISPLAY1" | "DISPLAY2"
+    "target_monitor": "auto",      # "auto" | "all" | "dual" | "primary" | "secondary" | "DISPLAY1" | "DISPLAY2"
+    "dual_mode": "span",           # "span" (seamless 32:9) | "sync" (two 16:9) | "independent"
     "window_width": 1920,
     "window_height": 1080,
     "high_dpi_scaling": True,
@@ -293,13 +294,61 @@ def launch_browser(port: int, config: Dict[str, Any], override_mode: Optional[st
     Launches browser pointed to screensaver with target monitor position,
     kiosk/fullscreen/windowed mode, and isolated profile.
     """
-    mode = override_mode or config.get("mode", "kiosk")
-    target_mon_id = override_monitor or config.get("target_monitor", "auto")
+    mode = override_mode or config.get("mode", "fullscreen")
+    target_mon_id = override_monitor or config.get("target_monitor", "primary")
     browser_exe, is_chromium = get_browser_executable(config.get("browser_path"))
 
     target_url = f"http://127.0.0.1:{port}"
 
-    # Resolve target monitor coordinates
+    # Check for multi-monitor dual launch
+    monitors_horiz = MonitorDetector.get_monitors_horizontal()
+    is_multi_mon = target_mon_id.lower() in ("all", "dual", "both", "multi")
+
+    if is_multi_mon and len(monitors_horiz) >= 2 and browser_exe and is_chromium:
+        dual_mode = config.get("dual_mode", "span")
+        spawned_pids = []
+        for idx, mon in enumerate(monitors_horiz[:2]):
+            m_left = mon["left"]
+            m_top = mon["top"]
+            m_w = mon["width"]
+            m_h = mon["height"]
+            screen_url = f"http://127.0.0.1:{port}/?screen={idx}&dual=1&dual_mode={dual_mode}"
+            prof_dir = BASE_DIR / f".browser_profile_screen_{idx}"
+            prof_dir.mkdir(exist_ok=True)
+
+            args = [
+                browser_exe,
+                f"--app={screen_url}",
+                f"--window-position={m_left},{m_top}",
+                f"--window-size={m_w},{m_h}",
+                f"--user-data-dir={str(prof_dir)}",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-translate",
+                "--disable-infobars",
+                "--disable-pinch",
+                "--overscroll-history-navigation=0",
+            ]
+            if config.get("high_dpi_scaling", True):
+                args.extend(["--high-dpi-support=1", "--force-device-scale-factor=1"])
+            if mode == "kiosk":
+                args.append("--kiosk")
+            elif mode == "fullscreen":
+                args.append("--start-fullscreen")
+
+            try:
+                proc = subprocess.Popen(args, close_fds=True)
+                spawned_pids.append(proc.pid)
+                print(f"[KuroLauncher] Launched Screen {idx} ({mon['name']}) at {m_left},{m_top} (PID: {proc.pid}).")
+            except Exception as e:
+                print(f"[KuroLauncher] Failed to start browser for Screen {idx}: {e}")
+
+        if spawned_pids:
+            BROWSER_PID_FILE.write_text(json.dumps(spawned_pids), encoding="utf-8")
+            print(f"[KuroLauncher] Dual-monitor screensaver running across {len(spawned_pids)} displays.")
+            return True
+
+    # Single monitor or fallback resolution
     monitors = MonitorDetector.get_connected_monitors()
     target_mon = None
 
@@ -395,13 +444,19 @@ def stop_screensaver() -> Tuple[bool, str]:
     closed_browser = False
     closed_server = False
 
-    # 1. Close browser process
+    # 1. Close browser process(es)
     if BROWSER_PID_FILE.is_file():
         try:
-            b_pid = int(BROWSER_PID_FILE.read_text(encoding="utf-8").strip())
-            if is_pid_running(b_pid):
-                subprocess.run(["taskkill", "/PID", str(b_pid), "/F", "/T"], capture_output=True)
-                closed_browser = True
+            content = BROWSER_PID_FILE.read_text(encoding="utf-8").strip()
+            pids = []
+            if content.startswith("["):
+                pids = json.loads(content)
+            else:
+                pids = [int(p) for p in content.split() if p.isdigit()]
+            for b_pid in pids:
+                if is_pid_running(int(b_pid)):
+                    subprocess.run(["taskkill", "/PID", str(b_pid), "/F", "/T"], capture_output=True)
+                    closed_browser = True
         except Exception:
             pass
         finally:
@@ -445,30 +500,47 @@ def stop_screensaver() -> Tuple[bool, str]:
     return True, "KuroAnime Screensaver stopped cleanly."
 
 
+def get_pythonw_path() -> str:
+    """Finds the Microsoft-signed pythonw.exe binary to comply with Smart App Control."""
+    py_dir = Path(sys.executable).parent
+    pythonw = py_dir / "pythonw.exe"
+    if pythonw.is_file():
+        return str(pythonw)
+    which_w = shutil.which("pythonw")
+    if which_w:
+        return which_w
+    return sys.executable
+
+
 def manage_windows_startup(action: str) -> Tuple[bool, str]:
     """
     Manages autostart via Windows Startup Folder:
     %APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\KuroAnime Screensaver.lnk
+    Uses Microsoft-signed pythonw.exe to prevent Smart App Control blocks.
     """
     startup_dir = Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
     if not startup_dir.is_dir():
         return False, "Windows Startup directory not found."
 
     shortcut_path = startup_dir / "KuroAnime Screensaver.lnk"
-    vbs_path = BASE_DIR / "start_silent.vbs"
+    pythonw_path = get_pythonw_path()
+    launcher_py = BASE_DIR / "launcher.py"
+    icon_path = BASE_DIR / "kuro.ico"
 
     if action == "status":
         enabled = shortcut_path.is_file()
         return True, f"Windows Startup: {'ENABLED' if enabled else 'DISABLED'}"
 
     elif action in ("enable", "install"):
-        # Create shortcut via PowerShell WScript.Shell
         ps_cmd = f"""
         $wsh = New-Object -ComObject WScript.Shell;
         $s = $wsh.CreateShortcut('{str(shortcut_path)}');
-        $s.TargetPath = 'wscript.exe';
-        $s.Arguments = '"{str(vbs_path)}"';
+        $s.TargetPath = '{str(pythonw_path)}';
+        $s.Arguments = '"{str(launcher_py)}" start --silent';
         $s.WorkingDirectory = '{str(BASE_DIR)}';
+        if (Test-Path '{str(icon_path)}') {{
+            $s.IconLocation = '{str(icon_path)},0';
+        }}
         $s.Description = 'KURO // ANIME Screensaver Silent Launcher';
         $s.Save();
         """
@@ -495,46 +567,47 @@ def manage_windows_startup(action: str) -> Tuple[bool, str]:
 def pin_to_start() -> Tuple[bool, str]:
     """
     Creates shortcuts in Start Menu and Desktop with high-DPI icon, and pins to Windows Start.
+    Uses Microsoft-signed pythonw.exe to comply with Windows Smart App Control (SAC).
     """
     programs_dir = Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
     desktop_dir = Path(os.environ.get("USERPROFILE", "")) / "Desktop"
     if not programs_dir.is_dir():
         return False, "Windows Start Menu Programs directory not found."
 
-    shortcut_name = "Kuro Anime Screensaver.lnk"
-    start_shortcut = programs_dir / shortcut_name
-    desktop_shortcut = desktop_dir / shortcut_name
-    vbs_path = BASE_DIR / "start_silent.vbs"
+    pythonw_path = get_pythonw_path()
+    launcher_py = BASE_DIR / "launcher.py"
     icon_path = BASE_DIR / "kuro.ico"
 
-    ps_code = f"""
-    $WshShell = New-Object -ComObject WScript.Shell
+    # Create both "Kuro Anime Screensaver.lnk" and "Kuro.lnk"
+    shortcuts = [
+        programs_dir / "Kuro Anime Screensaver.lnk",
+        programs_dir / "Kuro.lnk",
+        BASE_DIR / "Kuro.lnk"
+    ]
+    if desktop_dir.is_dir():
+        shortcuts.append(desktop_dir / "Kuro Anime Screensaver.lnk")
 
-    $s1 = $WshShell.CreateShortcut('{str(start_shortcut)}')
-    $s1.TargetPath = 'wscript.exe'
-    $s1.Arguments = '"{str(vbs_path)}"'
-    $s1.WorkingDirectory = '{str(BASE_DIR)}'
-    if (Test-Path '{str(icon_path)}') {{
-        $s1.IconLocation = '{str(icon_path)},0'
-    }}
-    $s1.Description = 'KURO // ANIME - Cinematic Ambient Screensaver'
-    $s1.Save()
-
-    if (Test-Path '{str(desktop_dir)}') {{
-        $s2 = $WshShell.CreateShortcut('{str(desktop_shortcut)}')
-        $s2.TargetPath = 'wscript.exe'
-        $s2.Arguments = '"{str(vbs_path)}"'
-        $s2.WorkingDirectory = '{str(BASE_DIR)}'
+    for s_path in shortcuts:
+        ps_code = f"""
+        $WshShell = New-Object -ComObject WScript.Shell
+        $s = $WshShell.CreateShortcut('{str(s_path)}')
+        $s.TargetPath = '{str(pythonw_path)}'
+        $s.Arguments = '"{str(launcher_py)}" start'
+        $s.WorkingDirectory = '{str(BASE_DIR)}'
         if (Test-Path '{str(icon_path)}') {{
-            $s2.IconLocation = '{str(icon_path)},0'
+            $s.IconLocation = '{str(icon_path)},0'
         }}
-        $s2.Description = 'KURO // ANIME - Cinematic Ambient Screensaver'
-        $s2.Save()
-    }}
+        $s.Description = 'KURO // ANIME - Cinematic Ambient Screensaver'
+        $s.Save()
+        """
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps_code], capture_output=True, text=True)
 
+    # Pin to Start
+    pin_target = programs_dir / "Kuro Anime Screensaver.lnk"
+    ps_pin = f"""
     $shell = New-Object -ComObject Shell.Application
     $folder = $shell.Namespace('{str(programs_dir)}')
-    $item = $folder.ParseName('{shortcut_name}')
+    $item = $folder.ParseName('{pin_target.name}')
     if ($item) {{
         foreach ($verb in $item.Verbs()) {{
             $clean = $verb.Name -replace '&', ''
@@ -545,9 +618,10 @@ def pin_to_start() -> Tuple[bool, str]:
         }}
     }}
     """
-    subprocess.run(["powershell", "-NoProfile", "-Command", ps_code], capture_output=True, text=True)
-    if start_shortcut.is_file():
-        return True, f"Kuro Anime Screensaver pinned to Windows Start & Desktop ({shortcut_name})"
+    subprocess.run(["powershell", "-NoProfile", "-Command", ps_pin], capture_output=True, text=True)
+
+    if pin_target.is_file():
+        return True, "Kuro Anime Screensaver shortcuts updated and pinned to Windows Start & Desktop"
     return False, "Could not create Start Menu shortcut."
 
 
@@ -566,7 +640,9 @@ def main():
     parser.add_argument("command", choices=["start", "stop", "status", "startup", "pin"], nargs="?", default="start", help="Action to perform")
     parser.add_argument("--silent", action="store_true", help="Run without opening a console window")
     parser.add_argument("--windowed", action="store_true", help="Launch frontend in windowed mode instead of kiosk")
-    parser.add_argument("--monitor", type=str, default=None, help="Target monitor device or ID (e.g. DISPLAY1, DISPLAY2, secondary)")
+    parser.add_argument("--monitor", type=str, default=None, help="Target monitor device or ID (e.g. DISPLAY1, DISPLAY2, secondary, dual)")
+    parser.add_argument("--dual", action="store_true", help="Launch across dual/all connected monitors simultaneously")
+    parser.add_argument("--dual-mode", choices=["span", "sync", "independent"], default=None, help="Dual-screen display mode: span, sync, independent")
     parser.add_argument("--browser", type=str, default=None, help="Path to browser executable")
     parser.add_argument("startup_action", choices=["enable", "disable", "status"], nargs="?", default="status", help="Startup subcommand")
 
@@ -575,6 +651,10 @@ def main():
 
     if args.browser:
         config["browser_path"] = args.browser
+    if args.dual:
+        config["target_monitor"] = "dual"
+    if args.dual_mode:
+        config["dual_mode"] = args.dual_mode
 
     # Command: PIN
     if args.command == "pin":
@@ -600,10 +680,15 @@ def main():
         port = get_active_port()
         healthy = is_server_healthy(port)
         monitors = MonitorDetector.get_connected_monitors()
+        dual_topo = MonitorDetector.get_dual_monitor_topology()
         print(f"Server Status: {'HEALTHY (127.0.0.1:' + str(port) + ')' if healthy else 'STOPPED'}")
         print(f"Monitors Detected: {len(monitors)}")
         for m in monitors:
             print(f"  - {m['name']} ({m['width']}x{m['height']} at {m['left']},{m['top']})")
+        if dual_topo.get("is_dual"):
+            print(f"Dual Monitor Topology: {dual_topo['combined_resolution']} ({dual_topo['combined_ratio']})")
+            print(f"  - Left Display:  {dual_topo['left_monitor']['name']}")
+            print(f"  - Right Display: {dual_topo['right_monitor']['name']}")
         _, start_msg = manage_windows_startup("status")
         print(f"Startup: {start_msg}")
         return 0
