@@ -139,8 +139,8 @@
     historyTotalPages: 1,
     historyTotalCount: 0,
     gifSettings: {
-      enabled: true,
-      mode: 'all',
+      enabled: false,
+      mode: 'static',
       prefer_hd: true
     }
   };
@@ -693,6 +693,17 @@
       } catch (e) {}
     }
     console.warn('[Kuro] Running in disconnected client mode.');
+  }
+
+  // Authenticated GET JSON helper
+  async function backendFetch(endpoint, timeoutMs = 5000) {
+    const res = await fetch(`${STATE.backendBase}${endpoint}`, {
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} on ${endpoint}`);
+    }
+    return res.json();
   }
 
   // Secure authenticated POST helper for state-changing operations
@@ -2206,7 +2217,22 @@
       }, 3500);
     }
 
-    window.addEventListener('mousemove', resetIdle, { passive: true });
+    function handleBottomTaskbarReveal(e) {
+      if (!e || typeof e.clientY !== 'number') return;
+      const inBottomHalf = e.clientY >= (window.innerHeight * 0.5);
+      if (inBottomHalf && !STATE.taskbarVisible) {
+        STATE.taskbarVisible = true;
+        backendPost('/api/window/taskbar', { visible: true }).catch(() => {});
+      } else if (!inBottomHalf && STATE.taskbarVisible) {
+        STATE.taskbarVisible = false;
+        backendPost('/api/window/taskbar', { visible: false }).catch(() => {});
+      }
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      resetIdle();
+      handleBottomTaskbarReveal(e);
+    }, { passive: true });
     window.addEventListener('mousedown', resetIdle, { passive: true });
     window.addEventListener('keydown', resetIdle, { passive: true });
     window.addEventListener('touchstart', resetIdle, { passive: true });
@@ -3399,12 +3425,19 @@
     DOM.btnPrev.addEventListener('click', displayPrevWallpaper);
     DOM.btnFavorite.addEventListener('click', toggleFavorite);
 
-    DOM.btnFullscreen.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
+    DOM.btnFullscreen.addEventListener('click', async () => {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen().catch(() => {});
+        return;
       }
+      try {
+        const resp = await backendPost('/api/window/fullscreen', {});
+        if (resp && resp.ok) {
+          const data = await resp.json();
+          if (data && data.success) return;
+        }
+      } catch (_) {}
+      document.documentElement.requestFullscreen().catch(() => {});
     });
 
     DOM.btnToggleHud.addEventListener('click', () => {
@@ -4874,24 +4907,17 @@
 
   // --- EXIT & SYSTEM SHUTDOWN ---
   async function exitScreensaverCleanly() {
-    if (!confirm('Exit KuroAnime Screensaver and stop the background server?')) return;
-    showToast('Shutting down KuroAnime Screensaver... Goodbye.');
+    showToast('Shutting down KuroAnime...');
     stopSoundscapeAudio();
 
     try {
       await backendPost('/api/shutdown', {});
     } catch (_) {}
 
+    try { window.close(); } catch (_) {}
     setTimeout(() => {
-      window.close();
-      // In case window.close() is blocked by browser policy
-      document.body.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#05070A;color:#CBD5E1;font-family:sans-serif;text-align:center;">
-          <h2 style="color:#6EE7B7;margin-bottom:0.5rem;">KuroAnime Screensaver Stopped Cleanly</h2>
-          <p style="color:#94A3B8;max-width:400px;line-height:1.5;">The Python server and database have been safely checkpointed and terminated. You can now close this browser tab.</p>
-        </div>
-      `;
-    }, 600);
+      try { window.close(); } catch (_) {}
+    }, 200);
   }
 
   async function loadLauncherConfig() {
@@ -7504,11 +7530,10 @@
       console.warn('[GIF] Failed saving gif setting:', e);
     }
 
-    // Immediately trigger next candidate if switched to GIFs Only
-    if (newMode === 'gif') {
-      STATE.wasExplicitlySkipped = true;
-      displayNextWallpaper();
-    }
+    // Immediately trigger next candidate so mode switch takes effect right away
+    STATE.wasExplicitlySkipped = true;
+    STATE.isTransitioning = false;
+    displayNextWallpaper();
   }
 
   async function loadGifSettings() {
@@ -7536,7 +7561,8 @@
         mode: DOM.settingGifMode ? DOM.settingGifMode.value : 'all',
         prefer_hd: DOM.settingGifHd ? DOM.settingGifHd.checked : true
       };
-      const res = await backendPost('/api/gif/settings', payload, true);
+      const resp = await backendPost('/api/gif/settings', payload);
+      const res = resp && resp.ok ? await resp.json() : null;
       if (res) {
         STATE.gifSettings = res;
         updateGifModeButtonUI(res.mode || 'all');
@@ -7555,8 +7581,9 @@
       DOM.btnDualScreenToggle.addEventListener('click', async () => {
         try {
           showToast('🖥️² Connecting Monitor 2...');
-          const res = await backendPost('/api/dual/launch', { action: 'toggle' });
-          if (res && res.success) {
+          const resp = await backendPost('/api/dual/launch', { action: 'toggle' });
+          const res = resp ? await resp.json() : null;
+          if (resp && resp.ok && res && res.success) {
             if (res.status === 'launched') {
               const mon = res.monitor;
               const monDesc = mon ? `${mon.name} (${mon.width}×${mon.height})` : 'Monitor 2';

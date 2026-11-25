@@ -21,6 +21,7 @@ import json
 import time
 import signal
 import socket
+import subprocess
 import logging
 import secrets
 import mimetypes
@@ -372,7 +373,9 @@ class KuroHandler(BaseHTTPRequestHandler):
                         self.send_json_response(item, status=200, origin=origin)
                         return
 
-            query_ratio = "dual" if (dual_mode == "span" and screen not in ("1", "right", "secondary") and ratio in ("dual", "32:9", "32x9", "dual_screen", "landscape")) else ratio
+            raw_dual = query.get("dual", [None])[0]
+            is_dual_flag = (raw_dual == "1")
+            query_ratio = "dual" if (is_dual_flag and dual_mode == "span" and screen not in ("1", "right", "secondary") and ratio in ("dual", "32:9", "32x9", "dual_screen", "landscape")) else ratio
             item = engine.get_next(
                 anime=anime,
                 character=character,
@@ -397,7 +400,17 @@ class KuroHandler(BaseHTTPRequestHandler):
 
             dim_x = item.get("dimension_x") or 0
             dim_y = item.get("dimension_y") or 1
-            is_dual_span = (query_ratio == "dual" or item.get("aspect_ratio") in ("32:9", "dual", "32x9") or (dim_x / dim_y >= 2.8))
+            if not dim_x and isinstance(item.get("resolution"), str) and "x" in item["resolution"]:
+                try:
+                    rw, rh = item["resolution"].lower().split("x", 1)
+                    dim_x, dim_y = int(rw), int(rh)
+                except Exception:
+                    pass
+            is_dual_span = (
+                item.get("aspect_ratio") in ("32:9", "dual", "32x9") or
+                item.get("ratio") in ("32:9", "dual", "32x9") or
+                (dim_x > 0 and dim_y > 0 and (dim_x / dim_y) >= 2.8)
+            )
             if is_dual_span and dual_mode == "span":
                 DualScreenManager.set_active_span_wallpaper(item)
                 item["is_dual_span"] = True
@@ -1103,13 +1116,16 @@ class KuroHandler(BaseHTTPRequestHandler):
             monitors = MonitorDetector.get_monitors_horizontal()
             dual_topo = MonitorDetector.get_dual_monitor_topology()
             sec_mon = None
-            if len(monitors) >= 2:
+            non_primary = [m for m in monitors if not m.get("primary")]
+            if non_primary:
+                sec_mon = non_primary[0]
+            elif len(monitors) >= 2:
                 sec_mon = monitors[1]
             elif dual_topo.get("right_monitor"):
                 sec_mon = dual_topo["right_monitor"]
 
-            from launcher import get_browser_executable, load_launcher_config, DEFAULT_CONFIG
-            cfg = load_launcher_config() or DEFAULT_CONFIG
+            from launcher import get_browser_executable, load_config, DEFAULT_CONFIG
+            cfg = load_config() or DEFAULT_CONFIG
             browser_exe, _ = get_browser_executable(cfg.get("browser_path"))
 
             if not browser_exe:
@@ -1458,13 +1474,86 @@ class KuroHandler(BaseHTTPRequestHandler):
             return
 
         # -------------------------------------------------------------
+        # API: Window Fullscreen Toggle (/api/window/fullscreen)
+        # -------------------------------------------------------------
+        if path in ["/api/window/fullscreen", "/api/v1/window/fullscreen"]:
+            toggled = False
+            if sys.platform == "win32":
+                try:
+                    import ctypes
+                    user32 = ctypes.windll.user32
+                    VK_F11 = 0x7A
+                    KEYEVENTF_KEYUP = 0x0002
+                    user32.keybd_event(VK_F11, 0, 0, 0)
+                    user32.keybd_event(VK_F11, 0, KEYEVENTF_KEYUP, 0)
+                    toggled = True
+                except Exception as e:
+                    logger.warning(f"Fullscreen toggle failed: {e}")
+            self.send_json_response({"success": toggled}, status=200, origin=origin)
+            return
+
+        # -------------------------------------------------------------
+        # API: Windows Start/Taskbar Reveal (/api/window/taskbar)
+        # -------------------------------------------------------------
+        if path in ["/api/window/taskbar", "/api/v1/window/taskbar"]:
+            visible = bool(payload.get("visible", True))
+            ok = False
+            if sys.platform == "win32":
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    user32 = ctypes.windll.user32
+                    user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+                    user32.FindWindowW.restype = wintypes.HWND
+                    user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+                    user32.SetWindowPos.restype = wintypes.BOOL
+                    hwnd_tray = user32.FindWindowW("Shell_TrayWnd", None)
+                    if hwnd_tray:
+                        HWND_TOPMOST = wintypes.HWND(-1)
+                        HWND_NOTOPMOST = wintypes.HWND(-2)
+                        SWP_NOMOVE = 0x0002
+                        SWP_NOSIZE = 0x0001
+                        SWP_NOACTIVATE = 0x0010
+                        SW_SHOW = 5
+                        if visible:
+                            user32.ShowWindow(hwnd_tray, SW_SHOW)
+                            user32.SetWindowPos(hwnd_tray, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
+                        else:
+                            user32.SetWindowPos(hwnd_tray, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
+                        ok = True
+                except Exception as e:
+                    logger.warning(f"Taskbar visibility update failed: {e}")
+            self.send_json_response({"success": ok, "visible": visible}, status=200, origin=origin)
+            return
+
+        # -------------------------------------------------------------
         # API: Graceful Server Shutdown (/api/shutdown & /api/v1/shutdown)
         # -------------------------------------------------------------
         if path in ["/api/shutdown", "/api/v1/shutdown"]:
             logger.info("Graceful shutdown requested via API.")
             self.send_json_response({"status": "shutting_down", "message": "Server shutting down"}, status=200, origin=origin)
-            if GLOBAL_SHUTDOWN_FUNC:
-                threading.Thread(target=lambda: (time.sleep(0.4), GLOBAL_SHUTDOWN_FUNC()), daemon=True).start()
+            def _shutdown_all():
+                time.sleep(0.3)
+                # Terminate any managed browser windows so the app closes automatically
+                global SECONDARY_BROWSER_PROC
+                if SECONDARY_BROWSER_PROC:
+                    try:
+                        SECONDARY_BROWSER_PROC.terminate()
+                    except Exception:
+                        pass
+                browser_pid_file = BASE_DIR / ".kuro_browser.pid"
+                if browser_pid_file.is_file():
+                    try:
+                        raw = browser_pid_file.read_text(encoding="utf-8").strip()
+                        pids = json.loads(raw) if raw.startswith("[") else [int(x) for x in raw.split() if x.isdigit()]
+                        for b_pid in pids:
+                            subprocess.run(["taskkill", "/PID", str(b_pid), "/F", "/T"], capture_output=True)
+                        browser_pid_file.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                if GLOBAL_SHUTDOWN_FUNC:
+                    GLOBAL_SHUTDOWN_FUNC()
+            threading.Thread(target=_shutdown_all, daemon=True).start()
             return
 
         # -------------------------------------------------------------

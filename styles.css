@@ -633,44 +633,20 @@ body.display-mode-dashboard #clock-seconds.hide-seconds {
   transform: scale(1.08);
 }
 
-/* Essential GIF Mode Button in Top Bar */
+/* Essential GIF Mode Single-Icon Button in Top Bar */
 .gif-mode-btn {
-  width: auto !important;
-  min-width: 5.6rem !important;
-  padding: 0 0.75rem !important;
-  border-radius: 9999px !important;
-  gap: 0.35rem;
-  background: rgba(244, 63, 94, 0.12) !important;
-  border: 1px solid rgba(244, 63, 94, 0.45) !important;
-  color: #FDA4AF !important;
-  font-size: 0.8rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.03em;
-}
-
-.gif-mode-btn:hover {
-  background: rgba(244, 63, 94, 0.25) !important;
-  border-color: rgba(244, 63, 94, 0.85) !important;
-  box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
-  transform: translateY(-1px) scale(1.03) !important;
+  transition: all 0.2s ease;
 }
 
 .gif-mode-btn.gif-mode-active {
   background: linear-gradient(135deg, rgba(244, 63, 94, 0.45), rgba(168, 85, 247, 0.45)) !important;
   border-color: #F43F5E !important;
   color: #FFFFFF !important;
-  box-shadow: 0 0 14px rgba(244, 63, 94, 0.75);
-  animation: pulse-gif-glow 2.5s infinite ease-in-out;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.7);
 }
 
 .gif-mode-btn.gif-mode-static {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #94A3B8 !important;
-}
-
-.gif-btn-label {
-  white-space: nowrap;
+  color: #E2E8F0 !important;
 }
 
 .icon-btn.exit-btn {

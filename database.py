@@ -1624,9 +1624,13 @@ class DatabaseManager:
             cur.execute("SELECT COUNT(*) FROM wallpaper_lifecycle WHERE (is_animated = 1 OR media_type = 'gif' OR url LIKE '%.gif') AND status = 'UNSEEN'")
             unseen_gifs = cur.fetchone()[0]
 
+            cur.execute("SELECT COUNT(*) FROM wallpaper_lifecycle WHERE (is_animated = 0 OR is_animated IS NULL) AND (media_type IS NULL OR media_type != 'gif') AND status = 'UNSEEN'")
+            unseen_static = cur.fetchone()[0]
+
             return {
                 "unseen_count": counts.get("UNSEEN", 0),
                 "unseen_gif_count": unseen_gifs,
+                "unseen_static_count": unseen_static,
                 "reserved_count": counts.get("RESERVED", 0),
                 "displayed_count": counts.get("DISPLAYED", 0),
                 "failed_count": counts.get("FAILED", 0),
@@ -2753,9 +2757,9 @@ class DatabaseManager:
                     }
             except Exception:
                 pass
-            return {"enabled": True, "mode": "all", "prefer_hd": True}
+            return {"enabled": False, "mode": "static", "prefer_hd": True}
 
-    def save_gif_settings(self, enabled: bool = True, mode: str = "all", prefer_hd: bool = True) -> bool:
+    def save_gif_settings(self, enabled: bool = False, mode: str = "static", prefer_hd: bool = True) -> bool:
         """Persists animated GIF playback preferences."""
         clean_mode = mode if mode in ("all", "static", "gif") else "all"
         with self.write_transaction() as (conn, cur):

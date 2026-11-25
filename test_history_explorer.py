@@ -51,6 +51,11 @@ class TestDatabaseHistoryExplorer(unittest.TestCase):
 
         # Populate test wallpapers and lifecycle records
         now = datetime.now(timezone.utc)
+        # Anchor "today" and "yesterday" to local noon converted to UTC so
+        # SQLite date(..., 'localtime') is deterministic even right after midnight.
+        local_noon = datetime.now().astimezone().replace(hour=12, minute=0, second=0, microsecond=0)
+        today_utc = local_noon.astimezone(timezone.utc)
+        yesterday_utc = (local_noon - timedelta(days=1)).astimezone(timezone.utc)
         self.sample_wallpapers = [
             {
                 "id": "wp_naruto_01",
@@ -64,7 +69,7 @@ class TestDatabaseHistoryExplorer(unittest.TestCase):
                 "anime": "Naruto Shippuden",
                 "character": "Naruto Uzumaki",
                 "quality_score": 92.5,
-                "displayed_at": (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
+                "displayed_at": today_utc.strftime("%Y-%m-%d %H:%M:%S"),
                 "is_fav": True,
             },
             {
@@ -79,7 +84,7 @@ class TestDatabaseHistoryExplorer(unittest.TestCase):
                 "anime": "Attack on Titan",
                 "character": "Eren Yeager",
                 "quality_score": 75.0,
-                "displayed_at": (now - timedelta(hours=30)).strftime("%Y-%m-%d %H:%M:%S"),
+                "displayed_at": yesterday_utc.strftime("%Y-%m-%d %H:%M:%S"),
                 "is_fav": False,
             },
             {

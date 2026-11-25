@@ -321,12 +321,12 @@ class WallpaperEngine:
             if search_key in self.exhausted_keys:
                 return 0
 
-            # Check bounded buffer
+            # Check bounded buffer per media type so GIFs never starve static wallpapers (and vice versa)
             stats = self.db.get_stats()
             if media_type == "gif":
-                if stats.get("unseen_gif_count", 0) >= 20:
+                if stats.get("unseen_gif_count", 0) >= 25:
                     return 0
-            elif stats.get("unseen_count", 0) >= self.max_unseen_buffer:
+            elif stats.get("unseen_static_count", stats.get("unseen_count", 0)) >= self.max_unseen_buffer:
                 return 0
 
             current_page = self.page_tracker.get(search_key, 1)

@@ -1,0 +1,2 @@
+# Kuro // Anime Screensaver uses 100% Python Standard Library (Python 3.10+).
+# Optional: pyinstaller for packaging binaries.
