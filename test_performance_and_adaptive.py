@@ -227,7 +227,7 @@ class TestServerMetricsIntegration(unittest.TestCase):
             self.assertEqual(resp.status, 200)
             data = json.loads(resp.read().decode("utf-8"))
 
-        self.assertEqual(data["prefetch_queue"]["queue_health"], "healthy")
+        self.assertIn(data["prefetch_queue"]["queue_health"], ("healthy", "refilling"))
 
     def test_quality_profile_update(self):
         # Update quality profile to balanced

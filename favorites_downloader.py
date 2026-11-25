@@ -223,7 +223,7 @@ class FavoritesDownloader:
                     target = cand
                     break
 
-        if target and target.is_file() and target.is_relative_to(self.favorites_dir.parent):
+        if target and target.is_file() and target.is_relative_to(self.favorites_dir.parent.resolve()):
             try:
                 target.unlink(missing_ok=True)
                 logger.info(f"Removed physical favorite file {target.name}")
